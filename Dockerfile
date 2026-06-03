@@ -9,5 +9,5 @@ FROM mcr.microsoft.com/dotnet/nightly/aspnet:10.0-preview
 WORKDIR /app
 COPY --from=build /app .
 USER $APP_UID
-EXPOSE 5000
+EXPOSE 11434
 ENTRYPOINT ["dotnet", "vs2026-copilot-deepseek-v4.dll"]

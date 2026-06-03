@@ -15,7 +15,15 @@ string API_KEY = Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY")
     ?? throw new InvalidOperationException("DEEPSEEK_API_KEY environment variable is required");
 string BASE_URL = Environment.GetEnvironmentVariable("DEEPSEEK_BASE_URL") ?? "https://api.deepseek.com";
 string MODEL = Environment.GetEnvironmentVariable("DEEPSEEK_MODEL") ?? "deepseek-v4-pro";
-int PORT = int.TryParse(Environment.GetEnvironmentVariable("PROXY_PORT"), out int p) ? p : 5000;
+string[] CONFIGURED_MODELS = ParseConfiguredModels(Environment.GetEnvironmentVariable("DEEPSEEK_MODELS"), MODEL);
+string[] AVAILABLE_MODELS = CONFIGURED_MODELS;
+DateTime MODELS_LAST_REFRESH_UTC = DateTime.MinValue;
+TimeSpan MODELS_REFRESH_INTERVAL = TimeSpan.FromMinutes(5);
+int PORT = int.TryParse(Environment.GetEnvironmentVariable("PROXY_PORT"), out int p) ? p : 11434;
+
+// Resolve model: pass through requested model when provided, fallback to default
+string ResolveModel(string? requestedModel) =>
+    string.IsNullOrWhiteSpace(requestedModel) ? MODEL : requestedModel;
 string? PROXY_API_KEY = Environment.GetEnvironmentVariable("PROXY_API_KEY");
 
 // ─── State ───────────────────────────────────────────────────────────
@@ -55,6 +63,8 @@ HttpClient httpClient = new(handler)
 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", API_KEY);
 httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
+await RefreshAvailableModels(CancellationToken.None);
+
 WebApplication app = builder.Build();
 
 // ─── Optional proxy auth middleware ─────────────────────────────────
@@ -78,18 +88,20 @@ if (!string.IsNullOrEmpty(PROXY_API_KEY))
 }
 
 // ─── GET /v1/models ──────────────────────────────────────────────────
-app.MapGet("/v1/models", () =>
-    Results.Json(new
+app.MapGet("/v1/models", async (HttpContext ctx) =>
+{
+    await RefreshAvailableModelsIfNeeded(ctx.RequestAborted);
+    return Results.Json(new
     {
         @object = "list",
-        data = new[]
-        {
-            new { id = MODEL, @object = "model", created = 1700000000, owned_by = "deepseek" }
-        }
-    }, JsonOpts));
+        data = AVAILABLE_MODELS.Select(m =>
+            new { id = m, @object = "model", created = 1700000000, owned_by = "deepseek" })
+            .ToArray()
+    }, JsonOpts);
+});
 
 // ─── GET /health ─────────────────────────────────────────────────────
-app.MapGet("/health", () => Results.Ok(new { status = "ok", model = MODEL }));
+app.MapGet("/health", () => Results.Ok(new { status = "ok", model = MODEL, available_models = AVAILABLE_MODELS, models_last_refresh_utc = MODELS_LAST_REFRESH_UTC }));
 
 // ─── POST /v1/chat/completions ──────────────────────────────────────
 app.MapPost("/v1/chat/completions", async (HttpContext ctx) =>
@@ -155,22 +167,73 @@ app.MapPost("/v1/chat/completions", async (HttpContext ctx) =>
     await StreamAndCache(upstreamResp, ctx.Response, ct);
 });
 
+// ─── Ollama /api/version ─────────────────────────────────────────────
+app.MapGet("/api/version", () => Results.Json(new { version = "0.5.7" }, JsonOpts));
+
 // ─── Ollama /api/tags ────────────────────────────────────────────────
-app.MapGet("/api/tags", () =>
-    Results.Json(new
+app.MapGet("/api/tags", async (HttpContext ctx) =>
+{
+    await RefreshAvailableModelsIfNeeded(ctx.RequestAborted);
+    return Results.Json(new
     {
-        models = new[]
-        {
-            new
+        models = AVAILABLE_MODELS.Select(m =>
             {
-                name = MODEL, model = MODEL,
-                modified_at = DateTime.UtcNow.ToString("o"), size = 0L,
-                digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-                details = new { parent_model = "", format = "api", family = "deepseek",
-                    families = Array.Empty<string>(), parameter_size = "", quantization_level = "" }
-            }
-        }
-    }, JsonOpts));
+                var p = GetModelProfile(m);
+                return new
+                {
+                    name = m,
+                    model = m,
+                    modified_at = DateTime.UtcNow.ToString("o"),
+                    size = 0L,
+                    digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                    details = new
+                    {
+                        parent_model = "",
+                        format = "api",
+                        family = "deepseek",
+                        families = new[] { "deepseek" },
+                        parameter_size = "api",
+                        quantization_level = "none"
+                    },
+                    capabilities = p.Capabilities,
+                    context_length = p.ContextLength,
+                    max_output_tokens = p.MaxOutputTokens,
+                    input_token_limit = p.ContextLength,
+                    output_token_limit = p.MaxOutputTokens,
+                    supports_tools = p.SupportsTools,
+                    supports_tool_calls = p.SupportsTools,
+                    supports_vision = p.SupportsVision,
+                    supports_images = p.SupportsVision
+                };
+            }).ToArray()
+    }, JsonOpts);
+});
+
+// ─── Ollama /api/show (GET + POST) ──────────────────────────────────
+app.MapGet("/api/show", async (HttpContext ctx, string? model) =>
+{
+    await RefreshAvailableModelsIfNeeded(ctx.RequestAborted);
+    string resolved = ResolveModel(model);
+    return Results.Json(BuildOllamaShowResponse(resolved), JsonOpts);
+});
+
+app.MapPost("/api/show", async (HttpContext ctx) =>
+{
+    await RefreshAvailableModelsIfNeeded(ctx.RequestAborted);
+    using StreamReader reader = new(ctx.Request.Body);
+    string body = await reader.ReadToEndAsync(ctx.RequestAborted);
+    string? model = null;
+    try
+    {
+        using JsonDocument d = JsonDocument.Parse(body);
+        if (d.RootElement.TryGetProperty("model", out JsonElement m) && m.ValueKind == JsonValueKind.String)
+            model = m.GetString();
+    }
+    catch { }
+
+    string resolved = ResolveModel(model);
+    return Results.Json(BuildOllamaShowResponse(resolved), JsonOpts);
+});
 
 // ─── Ollama /api/chat ────────────────────────────────────────────────
 app.MapPost("/api/chat", async (HttpContext ctx) =>
@@ -211,9 +274,14 @@ app.MapPost("/api/chat", async (HttpContext ctx) =>
         }
     }
 
+    // Resolve model from Ollama request
+    string ollamaRequestedModel = root.TryGetProperty("model", out JsonElement om) && om.ValueKind == JsonValueKind.String
+        ? om.GetString()! : MODEL;
+    string ollamaEffectiveModel = ResolveModel(ollamaRequestedModel);
+
     Dictionary<string, object?> reqObj = new()
     {
-        ["model"] = MODEL,
+        ["model"] = ollamaEffectiveModel,
         ["messages"] = messages,
         ["stream"] = isStream,
         ["max_tokens"] = 8192
@@ -243,7 +311,7 @@ app.MapPost("/api/chat", async (HttpContext ctx) =>
         JsonElement msg = odoc.RootElement.GetProperty("choices")[0].GetProperty("message");
         Dictionary<string, object?> ollamaResp = new()
         {
-            ["model"] = MODEL,
+            ["model"] = ollamaEffectiveModel,
             ["created_at"] = DateTime.UtcNow.ToString("o"),
             ["message"] = new Dictionary<string, object?>
             {
@@ -286,7 +354,8 @@ Console.WriteLine($"╔═══════════════════
 Console.WriteLine($"║   DeepSeek Copilot Proxy (Ultra)       ║");
 Console.WriteLine($"╠════════════════════════════════════════╣");
 Console.WriteLine($"║  Version: 2026.06.02                   ║");
-Console.WriteLine($"║  Model:   {MODEL,-32}                  ║");
+Console.WriteLine($"║  Default: {MODEL,-32}  ║");
+Console.WriteLine($"║  Models:  {string.Join(", ", AVAILABLE_MODELS),-32}  ║");
 Console.WriteLine($"║  URL:     http://localhost:{PORT}/v1   ║");
 Console.WriteLine($"║  Auth:    {(string.IsNullOrEmpty(PROXY_API_KEY) ? "open (no key set)" : "required (PROXY_API_KEY)"),-18} ║");
 Console.WriteLine($"╚════════════════════════════════════════╝");
@@ -296,23 +365,199 @@ app.Run();
 // Local functions (capture ReasoningCache, _assistantMsgCounter, httpClient)
 // ══════════════════════════════════════════════════════════════════════
 
+async Task RefreshAvailableModelsIfNeeded(CancellationToken ct)
+{
+    if (DateTime.UtcNow - MODELS_LAST_REFRESH_UTC < MODELS_REFRESH_INTERVAL)
+        return;
+
+    await RefreshAvailableModels(ct);
+}
+
+async Task RefreshAvailableModels(CancellationToken ct)
+{
+    try
+    {
+        string[] discovered = await TryGetModelsFromEndpoint("/v1/models", ct);
+        if (discovered.Length == 0)
+            discovered = await TryGetModelsFromEndpoint("/api/tags", ct);
+
+        string[] merged = CONFIGURED_MODELS
+            .Concat(discovered)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (merged.Length > 0)
+            AVAILABLE_MODELS = merged;
+
+        MODELS_LAST_REFRESH_UTC = DateTime.UtcNow;
+    }
+    catch
+    {
+        // keep current fallback list when discovery fails
+    }
+}
+
+async Task<string[]> TryGetModelsFromEndpoint(string endpoint, CancellationToken ct)
+{
+    try
+    {
+        using HttpResponseMessage resp = await httpClient.GetAsync(endpoint, ct);
+        if (!resp.IsSuccessStatusCode)
+            return [];
+
+        string body = await resp.Content.ReadAsStringAsync(ct);
+        using JsonDocument doc = JsonDocument.Parse(body);
+        return ExtractModels(doc.RootElement);
+    }
+    catch
+    {
+        return [];
+    }
+}
+
+string[] ExtractModels(JsonElement root)
+{
+    IEnumerable<JsonElement> items = [];
+
+    if (root.TryGetProperty("data", out JsonElement data) && data.ValueKind == JsonValueKind.Array)
+    {
+        items = data.EnumerateArray();
+    }
+    else if (root.TryGetProperty("models", out JsonElement models) && models.ValueKind == JsonValueKind.Array)
+    {
+        items = models.EnumerateArray();
+    }
+
+    return items
+        .Select(item =>
+        {
+            if (item.ValueKind == JsonValueKind.String)
+                return item.GetString();
+
+            if (item.ValueKind != JsonValueKind.Object)
+                return null;
+
+            if (item.TryGetProperty("id", out JsonElement id) && id.ValueKind == JsonValueKind.String)
+                return id.GetString();
+
+            if (item.TryGetProperty("name", out JsonElement name) && name.ValueKind == JsonValueKind.String)
+                return name.GetString();
+
+            if (item.TryGetProperty("model", out JsonElement model) && model.ValueKind == JsonValueKind.String)
+                return model.GetString();
+
+            return null;
+        })
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Select(x => x!)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+}
+
+string[] ParseConfiguredModels(string? rawModels, string fallbackModel)
+{
+    IEnumerable<string> configured = string.IsNullOrWhiteSpace(rawModels)
+        ? []
+        : rawModels
+            .Split([',', ';', '\n', '\r'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+    return configured
+        .Prepend(fallbackModel)
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+}
+
+(int ContextLength, int MaxOutputTokens, bool SupportsTools, bool SupportsVision, string[] Capabilities) GetModelProfile(string model)
+{
+    bool supportsVision = model.Contains("vision", StringComparison.OrdinalIgnoreCase)
+        || model.Contains("vl", StringComparison.OrdinalIgnoreCase);
+
+    // Official DeepSeek V4 limits (Models & Pricing): 1M context, up to 384K output
+    int contextLength = 1_000_000;
+    int maxOutputTokens = 384_000;
+
+    string[] capabilities = supportsVision
+        ? ["completion", "tools", "vision"]
+        : ["completion", "tools"];
+
+    return (contextLength, maxOutputTokens, true, supportsVision, capabilities);
+}
+
+Dictionary<string, object?> BuildOllamaShowResponse(string model)
+{
+    var p = GetModelProfile(model);
+
+    return new Dictionary<string, object?>
+    {
+        ["model"] = model,
+        ["modified_at"] = DateTime.UtcNow.ToString("o"),
+        ["size"] = 0L,
+        ["digest"] = "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        ["license"] = "DeepSeek API",
+        ["modelfile"] = $"FROM {model}",
+        ["parameters"] = $"num_ctx {p.ContextLength}\nnum_predict {p.MaxOutputTokens}",
+        ["template"] = "{{ .Prompt }}",
+        ["details"] = new Dictionary<string, object?>
+        {
+            ["parent_model"] = "",
+            ["format"] = "api",
+            ["family"] = "deepseek",
+            ["families"] = new[] { "deepseek" },
+            ["parameter_size"] = "api",
+            ["quantization_level"] = "none"
+        },
+        ["model_info"] = new Dictionary<string, object?>
+        {
+            ["general.architecture"] = "deepseek",
+            ["general.basename"] = model,
+            ["general.context_length"] = p.ContextLength,
+            ["deepseek.context_length"] = p.ContextLength,
+            ["context_length"] = p.ContextLength,
+            ["max_output_tokens"] = p.MaxOutputTokens,
+            ["input_token_limit"] = p.ContextLength,
+            ["output_token_limit"] = p.MaxOutputTokens,
+            ["supports_tools"] = p.SupportsTools,
+            ["supports_tool_calls"] = p.SupportsTools,
+            ["supports_vision"] = p.SupportsVision,
+            ["supports_images"] = p.SupportsVision
+        },
+        ["capabilities"] = p.Capabilities,
+        ["context_length"] = p.ContextLength,
+        ["max_output_tokens"] = p.MaxOutputTokens,
+        ["input_token_limit"] = p.ContextLength,
+        ["output_token_limit"] = p.MaxOutputTokens,
+        ["supports_tools"] = p.SupportsTools,
+        ["supports_tool_calls"] = p.SupportsTools,
+        ["supports_vision"] = p.SupportsVision,
+        ["supports_images"] = p.SupportsVision
+    };
+}
+
 string? ModifyRequest(JsonDocument doc)
 {
     JsonElement root = doc.RootElement;
     if (!root.TryGetProperty("messages", out JsonElement msgs))
         return null;
-    
+
+    // Extract requested model and resolve against available models
+    string requestedModel = root.TryGetProperty("model", out JsonElement reqModel)
+        && reqModel.ValueKind == JsonValueKind.String ? reqModel.GetString()! : MODEL;
+    string effectiveModel = ResolveModel(requestedModel);
+
     int idx = 0;
     bool modified = false;
     using MemoryStream ms = new();
     using Utf8JsonWriter w = new(ms);
-    
+
     w.WriteStartObject();
     foreach (JsonProperty prop in root.EnumerateObject())
     {
         if (prop.NameEquals("model"))
         {
-            w.WriteString("model", MODEL);
+            w.WriteString("model", effectiveModel);
+            if (effectiveModel != requestedModel) modified = true;
             continue;
         }
 

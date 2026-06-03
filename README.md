@@ -15,8 +15,8 @@ A high-performance, ultra-low-overhead HTTP proxy that connects GitHub Copilot a
 |---|---|
 | **Author** | iqmeta GmbH — Otto Neff |
 | **Version** | `2026.06.02` |
-| **Model** | `deepseek-v4-flash` (configurable) |
-| **Default Port** | `5000` |
+| **Models** | `deepseek-v4-pro`, `deepseek-v4-flash` (auto-discovered) |
+| **Default Port** | `11434` |
 | **Framework** | .NET 10 |
 | **Deploy** | Docker / bare metal |
 
@@ -42,7 +42,7 @@ A high-performance, ultra-low-overhead HTTP proxy that connects GitHub Copilot a
 - **🧠 Reasoning Content Caching** — Automatically captures DeepSeek's `reasoning_content` from streaming and non-streaming responses, and re-injects it on subsequent assistant messages for true multi-turn reasoning.
 - **🔄 Dual API Compatibility**
   - **OpenAI-compatible** endpoint (`POST /v1/chat/completions`) — works with GitHub Copilot, Cursor, Continue.dev, and any OpenAI SDK.
-  - **Ollama-compatible** endpoints (`GET /api/tags`, `POST /api/chat`) — works with any Ollama client.
+  - **Ollama-compatible** endpoints (`GET /api/version`, `GET /api/tags`, `GET/POST /api/show`, `POST /api/chat`) — works with Visual Studio BYOM and Ollama-compatible clients.
 - **⚡ Ultra-Performance** — Uses `SocketsHttpHandler` with connection pooling (256 connections/server, HTTP/2 multiplexing), `SlimBuilder`, and pass-through streaming.
 - **📦 Zero Allocation Streaming** — SSE (Server-Sent Events) are streamed through without buffering, with minimal allocations during parsing.
 - **🔌 No External Dependencies** — Uses only built-in ASP.NET Core and `System.Text.Json`.
@@ -72,10 +72,17 @@ All configuration lives in environment variables:
 | Variable | Default | Description |
 |---|---|---|
 | `DEEPSEEK_API_KEY` | *required* | Your DeepSeek API key |
-| `DEEPSEEK_MODEL` | `deepseek-v4-flash` | Model to proxy (`deepseek-chat`, etc.) |
-| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | Upstream API base URL |
-| `PROXY_PORT` | `5000` | Port the proxy listens on |
+| `DEEPSEEK_MODEL` | `deepseek-v4-pro` | Fallback model if client request does not include `model` |
+| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | Upstream API base URL (models are discovered from `${DEEPSEEK_BASE_URL}/v1/models`) |
+| `PROXY_PORT` | `11434` | Port the proxy listens on |
 | `PROXY_API_KEY` | *optional* | If set, clients must send `Authorization: Bearer <key>` |
+
+Recommended DeepSeek V4 model capabilities and limits used by this proxy (from official DeepSeek Models & Pricing):
+
+| Model | Context Length | Max Output Tokens | Tool Calls | Vision |
+|---|---:|---:|---|---|
+| `deepseek-v4-pro` | 1,000,000 | 384,000 | Yes | No |
+| `deepseek-v4-flash` | 1,000,000 | 384,000 | Yes | No |
 
 ### 2a. Run with Docker (recommended)
 
@@ -95,8 +102,9 @@ You should see:
 ╔════════════════════════════════════════╗
 ║   DeepSeek Copilot Proxy (Ultra)       ║
 ╠════════════════════════════════════════╣
-║  Model:   deepseek-v4-flash            ║
-║  URL:     http://localhost:5000/v1     ║
+║  Default: deepseek-v4-pro              ║
+║  Models:  deepseek-v4-flash, deepseek-v4-pro ║
+║  URL:     http://localhost:11434/v1    ║
 ║  Auth:    open (no key set)            ║
 ╚════════════════════════════════════════╝
 ```
@@ -113,7 +121,7 @@ GET /health
 
 Response:
 ```json
-{ "status": "ok", "model": "deepseek-v4-flash" }
+{ "status": "ok", "model": "deepseek-v4-pro", "available_models": ["deepseek-v4-flash", "deepseek-v4-pro"] }
 ```
 
 ### List Models (OpenAI-style)
@@ -133,11 +141,14 @@ Full OpenAI chat completions API — supports both streaming (`stream: true`) an
 ### Ollama API
 
 ```http
+GET /api/version
 GET /api/tags
+GET /api/show
+POST /api/show
 POST /api/chat
 ```
 
-Converts Ollama's message format to OpenAI format transparently and proxies to DeepSeek. Supports `messages`, `tools`, `stream`, and `images` (vision).
+Converts Ollama's message format to OpenAI format transparently and proxies to DeepSeek. Supports `messages`, `tools`, and `stream`. `/api/tags` and `/api/show` include model capabilities and token limits for Visual Studio BYOM compatibility.
 
 ---
 
@@ -152,7 +163,7 @@ Configure your Copilot client to use the proxy:
   "github.copilot.advanced": {
     "debug.chatOverride": {
       "provider": "openai",
-      "endpoint": "http://localhost:5000/v1/chat/completions",
+      "endpoint": "http://localhost:11434/v1/chat/completions",
       "model": "deepseek-v4-flash"
     }
   }
@@ -166,7 +177,7 @@ If `PROXY_API_KEY` is set, add the auth header:
   "github.copilot.advanced": {
     "debug.chatOverride": {
       "provider": "openai",
-      "endpoint": "http://localhost:5000/v1/chat/completions",
+      "endpoint": "http://localhost:11434/v1/chat/completions",
       "model": "deepseek-v4-flash",
       "apiKey": "your-proxy-key"
     }
@@ -179,13 +190,13 @@ If `PROXY_API_KEY` is set, add the auth header:
 Point any Ollama client to the proxy:
 
 ```bash
-ollama run deepseek-v4-flash --api http://localhost:5000/api/chat
+ollama run deepseek-v4-flash --api http://localhost:11434/api/chat
 ```
 
 Or use the OpenAI compatibility mode with Ollama clients:
 
 ```bash
-OLLAMA_HOST=http://localhost:5000 ollama serve
+OLLAMA_HOST=http://localhost:11434 ollama serve
 ```
 
 ### Continue.dev / Cursor
@@ -198,7 +209,7 @@ Configure the OpenAI-compatible endpoint:
     "title": "DeepSeek V4",
     "provider": "openai",
     "model": "deepseek-v4-flash",
-    "apiBase": "http://localhost:5000/v1"
+    "apiBase": "http://localhost:11434/v1"
   }]
 }
 ```
@@ -239,7 +250,7 @@ Adjust these in `Program.cs` based on your workload.
 ```
 ┌──────────────┐     ┌─────────────────────────────────┐     ┌───────────────┐
 │  Copilot /   │────▶│  DeepSeek Copilot Proxy         │────▶│  api.deepseek │
-│  Ollama CLI  │     │  (localhost:5000)                │     │  .com         │
+│  Ollama CLI  │     │  (localhost:11434)               │     │  .com         │
 │              │◀────│  - Reasoning caching             │◀────│               │
 │              │     │  - Format translation            │     │               │
 │              │     │  - Streaming proxy               │     │               │
