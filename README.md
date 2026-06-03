@@ -1,4 +1,4 @@
-# C# DeepSeek Github Copilot Proxy for Visual Studio 2026 Ollama Provider 
+# C# Multi-Provider AI Proxy for Visual Studio 2026 Ollama Provider 
 
 as of 9. May 2026 use Visual Studio Insider Version
 
@@ -9,13 +9,14 @@ DeepSeek V4 AI Beats Billion Dollar Systems…For (almost) Free
 
 https://www.youtube.com/watch?v=p7K3xfViWCE
 
-A high-performance, ultra-low-overhead HTTP proxy that connects GitHub Copilot and Ollama clients to the **DeepSeek** API. Built with .NET 10 and ASP.NET Core minimal APIs for maximum throughput and minimal allocations.
+A high-performance, ultra-low-overhead HTTP proxy that connects GitHub Copilot and Ollama clients to **DeepSeek, OpenAI, and NVIDIA NIM** APIs. Built with .NET 10 and ASP.NET Core minimal APIs for maximum throughput and minimal allocations.
 
 | 🏷️ | Details |
 |---|---|
 | **Author** | iqmeta GmbH — Otto Neff |
 | **Version** | `2026.06.02` |
-| **Models** | `deepseek-v4-pro`, `deepseek-v4-flash` (auto-discovered) |
+| **Providers** | `deepseek`, `openai`, `nvidia` (configurable) |
+| **Models** | Auto-discovered from each provider |
 | **Default Port** | `11434` |
 | **Framework** | .NET 10 |
 | **Deploy** | Docker / bare metal |
@@ -40,6 +41,7 @@ A high-performance, ultra-low-overhead HTTP proxy that connects GitHub Copilot a
 ## Features
 
 - **🧠 Reasoning Content Caching** — Automatically captures DeepSeek's `reasoning_content` from streaming and non-streaming responses, and re-injects it on subsequent assistant messages for true multi-turn reasoning.
+- **🌐 Multi-Provider Support** — Configure DeepSeek, OpenAI, and/or NVIDIA NIM. Models are auto-discovered from each provider's API. Requests are automatically routed to the correct backend based on model name.
 - **🔄 Dual API Compatibility**
   - **OpenAI-compatible** endpoint (`POST /v1/chat/completions`) — works with GitHub Copilot, Cursor, Continue.dev, and any OpenAI SDK.
   - **Ollama-compatible** endpoints (`GET /api/version`, `GET /api/tags`, `GET/POST /api/show`, `POST /api/chat`) — works with Visual Studio BYOM and Ollama-compatible clients.
@@ -71,18 +73,28 @@ All configuration lives in environment variables:
 
 | Variable | Default | Description |
 |---|---|---|
-| `DEEPSEEK_API_KEY` | *required* | Your DeepSeek API key |
+| `PROVIDER_DEEPSEEK_API_KEY` | — | DeepSeek API key |
+| `PROVIDER_DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | DeepSeek API base URL |
+| `PROVIDER_OPENAI_API_KEY` | — | OpenAI API key (optional) |
+| `PROVIDER_OPENAI_BASE_URL` | `https://api.openai.com` | OpenAI API base URL |
+| `PROVIDER_NVIDIA_API_KEY` | — | NVIDIA NIM API key (optional) |
+| `PROVIDER_NVIDIA_BASE_URL` | `https://integrate.api.nvidia.com` | NVIDIA NIM API base URL |
+| `DEEPSEEK_API_KEY` | — | Legacy: works if no `PROVIDER_*` vars are set |
 | `DEEPSEEK_MODEL` | `deepseek-v4-pro` | Fallback model if client request does not include `model` |
-| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | Upstream API base URL (models are discovered from `${DEEPSEEK_BASE_URL}/v1/models`) |
 | `PROXY_PORT` | `11434` | Port the proxy listens on |
 | `PROXY_API_KEY` | *optional* | If set, clients must send `Authorization: Bearer <key>` |
 
-Recommended DeepSeek V4 model capabilities and limits used by this proxy (from official DeepSeek Models & Pricing):
+> **Backward compatible**: If only `DEEPSEEK_API_KEY` is set (without `PROVIDER_*` vars), the proxy works as before with DeepSeek only.
 
-| Model | Context Length | Max Output Tokens | Tool Calls | Vision |
-|---|---:|---:|---|---|
-| `deepseek-v4-pro` | 1,000,000 | 384,000 | Yes | No |
-| `deepseek-v4-flash` | 1,000,000 | 384,000 | Yes | No |
+### Supported Models & Capabilities
+
+Models are auto-discovered from each configured provider. Typical defaults:
+
+| Provider | Example Models | Context | Max Output | Tools | Vision |
+|---|---|---|---|---|---|
+| DeepSeek | `deepseek-v4-pro`, `deepseek-v4-flash` | 1M | 384K | ✅ | ❌ |
+| OpenAI | `gpt-4o`, `gpt-4o-mini` | 128K | 16K | ✅ | ✅ |
+| NVIDIA NIM | `meta/llama-3.3-70b`, `nvidia/nemotron-4-340b` | 128K | 4K | ✅ | ❌ |
 
 ### 2a. Run with Docker (recommended)
 
@@ -99,14 +111,15 @@ dotnet run
 You should see:
 
 ```
-╔══════════════════════════════════════════════╗
-║   DeepSeek Copilot Proxy (Ultra)             ║
-╠══════════════════════════════════════════════╣
-║  Default: deepseek-v4-pro                    ║
-║  Models:  deepseek-v4-flash, deepseek-v4-pro ║
-║  URL:     http://localhost:11434/v1          ║
-║  Auth:    open (no key set)                  ║
-╚══════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════════════╗
+║   DeepSeek / Multi-Provider Copilot Proxy (Ultra)               ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Default: deepseek-v4-pro                                        ║
+║  Providers: deepseek                                              ║
+║  Models:   deepseek-v4-flash, deepseek-v4-pro                    ║
+║  URL:     http://localhost:11434/v1                              ║
+║  Auth:    open (no key set)                                      ║
+╚══════════════════════════════════════════════════════════════════╝
 ```
 
 ---

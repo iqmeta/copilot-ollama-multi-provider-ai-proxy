@@ -11,20 +11,24 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 // ─── Config (from environment) ───────────────────────────────────────
-string API_KEY = Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY")
-    ?? throw new InvalidOperationException("DEEPSEEK_API_KEY environment variable is required");
-string BASE_URL = Environment.GetEnvironmentVariable("DEEPSEEK_BASE_URL") ?? "https://api.deepseek.com";
 string MODEL = Environment.GetEnvironmentVariable("DEEPSEEK_MODEL") ?? "deepseek-v4-pro";
-string[] CONFIGURED_MODELS = ParseConfiguredModels(Environment.GetEnvironmentVariable("DEEPSEEK_MODELS"), MODEL);
-string[] AVAILABLE_MODELS = CONFIGURED_MODELS;
+int PORT = int.TryParse(Environment.GetEnvironmentVariable("PROXY_PORT"), out int p) ? p : 11434;
+string? PROXY_API_KEY = Environment.GetEnvironmentVariable("PROXY_API_KEY");
+
+List<ProviderInfo> PROVIDERS = [];
+Dictionary<string, ProviderInfo> MODEL_TO_PROVIDER = new(StringComparer.OrdinalIgnoreCase);
+string[] AVAILABLE_MODELS = [MODEL];
 DateTime MODELS_LAST_REFRESH_UTC = DateTime.MinValue;
 TimeSpan MODELS_REFRESH_INTERVAL = TimeSpan.FromMinutes(5);
-int PORT = int.TryParse(Environment.GetEnvironmentVariable("PROXY_PORT"), out int p) ? p : 11434;
 
-// Resolve model: pass through requested model when provided, fallback to default
+// Resolve model → provider: look up by model name, fallback to first provider's default
+ProviderInfo ResolveProvider(string? requestedModel) =>
+    !string.IsNullOrWhiteSpace(requestedModel) && MODEL_TO_PROVIDER.TryGetValue(requestedModel, out var p)
+        ? p : PROVIDERS[0];
+
 string ResolveModel(string? requestedModel) =>
-    string.IsNullOrWhiteSpace(requestedModel) ? MODEL : requestedModel;
-string? PROXY_API_KEY = Environment.GetEnvironmentVariable("PROXY_API_KEY");
+    !string.IsNullOrWhiteSpace(requestedModel) && MODEL_TO_PROVIDER.ContainsKey(requestedModel)
+        ? requestedModel : MODEL;
 
 // ─── State ───────────────────────────────────────────────────────────
 ConcurrentDictionary<string, string> ReasoningCache = new(StringComparer.Ordinal);
@@ -41,8 +45,8 @@ JsonSerializerOptions JsonOpts = new()
 WebApplicationBuilder builder = WebApplication.CreateSlimBuilder(args);
 builder.WebHost.UseUrls($"http://0.0.0.0:{PORT}");
 
-// Max-performance HTTP handler
-SocketsHttpHandler handler = new()
+// Max-performance HTTP handler (shared across all providers)
+SocketsHttpHandler sharedHandler = new()
 {
     EnableMultipleHttp2Connections = true,
     MaxConnectionsPerServer = 256,
@@ -55,13 +59,51 @@ SocketsHttpHandler handler = new()
     PreAuthenticate = false
 };
 
-HttpClient httpClient = new(handler)
+HttpClient CreateProviderClient(string baseUrl, string apiKey)
 {
-    Timeout = TimeSpan.FromMinutes(5),
-    BaseAddress = new Uri(BASE_URL)
-};
-httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", API_KEY);
-httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+    HttpClient client = new(sharedHandler)
+    {
+        Timeout = TimeSpan.FromMinutes(5),
+        BaseAddress = new Uri(baseUrl)
+    };
+    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+    return client;
+}
+
+// Discover providers from prefixed env vars: PROVIDER_<NAME>_API_KEY
+foreach (string providerName in new[] { "deepseek", "openai", "nvidia" })
+{
+    string prefix = providerName.ToUpperInvariant();
+    string? apiKey = Environment.GetEnvironmentVariable($"PROVIDER_{prefix}_API_KEY");
+
+    if (string.IsNullOrWhiteSpace(apiKey)) continue;
+
+    string baseUrl = Environment.GetEnvironmentVariable($"PROVIDER_{prefix}_BASE_URL")
+        ?? providerName switch
+        {
+            "deepseek" => "https://api.deepseek.com",
+            "openai" => "https://api.openai.com",
+            "nvidia" => "https://integrate.api.nvidia.com",
+            _ => ""
+        };
+
+    HttpClient provClient = CreateProviderClient(baseUrl, apiKey);
+    PROVIDERS.Add(new ProviderInfo(providerName, apiKey, baseUrl, provClient));
+}
+
+// Fallback: legacy DEEPSEEK_API_KEY (backward compatible)
+if (PROVIDERS.Count == 0)
+{
+    string? legacyKey = Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY");
+    if (string.IsNullOrWhiteSpace(legacyKey))
+        throw new InvalidOperationException(
+            "No AI provider configured. Set PROVIDER_<NAME>_API_KEY (e.g. PROVIDER_DEEPSEEK_API_KEY) or DEEPSEEK_API_KEY.");
+
+    string legacyUrl = Environment.GetEnvironmentVariable("DEEPSEEK_BASE_URL") ?? "https://api.deepseek.com";
+    PROVIDERS.Add(new ProviderInfo("deepseek", legacyKey, legacyUrl,
+        CreateProviderClient(legacyUrl, legacyKey)));
+}
 
 await RefreshAvailableModels(CancellationToken.None);
 
@@ -95,66 +137,79 @@ app.MapGet("/v1/models", async (HttpContext ctx) =>
     {
         @object = "list",
         data = AVAILABLE_MODELS.Select(m =>
-            new { id = m, @object = "model", created = 1700000000, owned_by = "deepseek" })
-            .ToArray()
+        {
+            string providerName = MODEL_TO_PROVIDER.TryGetValue(m, out var prov) ? prov.Name : "unknown";
+            return new { id = m, @object = "model", created = 1700000000, owned_by = providerName };
+        }).ToArray()
     }, JsonOpts);
 });
 
 // ─── GET /health ─────────────────────────────────────────────────────
-app.MapGet("/health", () => Results.Ok(new { status = "ok", model = MODEL, available_models = AVAILABLE_MODELS, models_last_refresh_utc = MODELS_LAST_REFRESH_UTC }));
+app.MapGet("/health", () => Results.Ok(new {
+    status = "ok",
+    model = MODEL,
+    available_models = AVAILABLE_MODELS,
+    providers = PROVIDERS.Select(p => p.Name).ToArray(),
+    models_last_refresh_utc = MODELS_LAST_REFRESH_UTC
+}));
 
 // ─── POST /v1/chat/completions ──────────────────────────────────────
 app.MapPost("/v1/chat/completions", async (HttpContext ctx) =>
 {
     CancellationToken ct = ctx.RequestAborted;
-    
+
     // Read and parse request
     using StreamReader bodyReader = new(ctx.Request.Body, Encoding.UTF8, false, 1024);
     string rawBody = await bodyReader.ReadToEndAsync(ct);
-    
+
     using JsonDocument doc = JsonDocument.Parse(rawBody);
     JsonElement root = doc.RootElement;
     bool isStream = root.TryGetProperty("stream", out JsonElement sp) && sp.GetBoolean();
 
-    // Inject cached reasoning_content and override model
+    // Resolve provider from requested model
+    string reqModel = root.TryGetProperty("model", out JsonElement rm) && rm.ValueKind == JsonValueKind.String
+        ? rm.GetString()! : MODEL;
+    ProviderInfo provider = ResolveProvider(reqModel);
+
+    // Inject cached reasoning_content
     string? modified = ModifyRequest(doc);
     string bodyText = modified ?? rawBody;
-    
-    // For non-streaming: direct proxy via HttpClient
+
+    // For non-streaming: direct proxy via provider's HttpClient
     if (!isStream)
     {
         using StringContent content = new(bodyText, Encoding.UTF8, "application/json");
-        using HttpResponseMessage response = await httpClient.SendAsync(
+        using HttpResponseMessage response = await provider.Client.SendAsync(
             new HttpRequestMessage(HttpMethod.Post, "/v1/chat/completions") { Content = content },
             ct);
 
         string respBody = await response.Content.ReadAsStringAsync(ct);
-        
+
         if (response.IsSuccessStatusCode)
             CacheReasoningFromResponse(respBody);
-        
+
         ctx.Response.StatusCode = (int)response.StatusCode;
         ctx.Response.ContentType = "application/json";
         await ctx.Response.WriteAsync(respBody, ct);
         return;
     }
-    
+
     // ── Streaming ──
     ctx.Response.StatusCode = 200;
     ctx.Response.ContentType = "text/event-stream";
     ctx.Response.Headers.CacheControl = "no-cache";
     ctx.Response.Headers["X-Accel-Buffering"] = "no";
-    
+
     using StringContent reqContent = new(bodyText, Encoding.UTF8, "application/json");
     using HttpRequestMessage upstreamReq = new(HttpMethod.Post, "/v1/chat/completions")
     {
         Content = reqContent
     };
     upstreamReq.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
-    
-    using HttpResponseMessage upstreamResp = await httpClient.SendAsync(
+
+    using HttpResponseMessage upstreamResp = await provider.Client.SendAsync(
         upstreamReq, HttpCompletionOption.ResponseHeadersRead, ct);
-    
+
     if (!upstreamResp.IsSuccessStatusCode)
     {
         string errBody = await upstreamResp.Content.ReadAsStringAsync(ct);
@@ -163,7 +218,7 @@ app.MapPost("/v1/chat/completions", async (HttpContext ctx) =>
         await ctx.Response.WriteAsync(errBody, ct);
         return;
     }
-    
+
     await StreamAndCache(upstreamResp, ctx.Response, ct);
 });
 
@@ -179,6 +234,7 @@ app.MapGet("/api/tags", async (HttpContext ctx) =>
         models = AVAILABLE_MODELS.Select(m =>
             {
                 (int ContextLength, int MaxOutputTokens, bool SupportsTools, bool SupportsVision, string[] Capabilities) p = GetModelProfile(m);
+                string providerName = MODEL_TO_PROVIDER.TryGetValue(m, out var prov) ? prov.Name : "unknown";
                 return new
                 {
                     name = m,
@@ -190,8 +246,8 @@ app.MapGet("/api/tags", async (HttpContext ctx) =>
                     {
                         parent_model = "",
                         format = "api",
-                        family = "deepseek",
-                        families = new[] { "deepseek" },
+                        family = providerName,
+                        families = new[] { providerName },
                         parameter_size = "api",
                         quantization_level = "none"
                     },
@@ -274,10 +330,11 @@ app.MapPost("/api/chat", async (HttpContext ctx) =>
         }
     }
 
-    // Resolve model from Ollama request
+    // Resolve model from Ollama request + provider
     string ollamaRequestedModel = root.TryGetProperty("model", out JsonElement om) && om.ValueKind == JsonValueKind.String
         ? om.GetString()! : MODEL;
     string ollamaEffectiveModel = ResolveModel(ollamaRequestedModel);
+    ProviderInfo ollamaProvider = ResolveProvider(ollamaEffectiveModel);
 
     Dictionary<string, object?> reqObj = new()
     {
@@ -291,10 +348,10 @@ app.MapPost("/api/chat", async (HttpContext ctx) =>
 
     string reqJson = JsonSerializer.Serialize(reqObj, JsonOpts);
     using StringContent reqContent = new(reqJson, Encoding.UTF8, "application/json");
-    
+
     if (!isStream)
     {
-        using HttpResponseMessage resp = await httpClient.SendAsync(
+        using HttpResponseMessage resp = await ollamaProvider.Client.SendAsync(
             new HttpRequestMessage(HttpMethod.Post, "/v1/chat/completions") { Content = reqContent }, ct);
         string respBody = await resp.Content.ReadAsStringAsync(ct);
         
@@ -338,8 +395,8 @@ app.MapPost("/api/chat", async (HttpContext ctx) =>
             Content = reqContent
         };
         upstreamReq.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
-        
-        using HttpResponseMessage upstreamResp = await httpClient.SendAsync(
+
+        using HttpResponseMessage upstreamResp = await ollamaProvider.Client.SendAsync(
             upstreamReq, HttpCompletionOption.ResponseHeadersRead, ct);
         
         if (!upstreamResp.IsSuccessStatusCode)
@@ -350,15 +407,16 @@ app.MapPost("/api/chat", async (HttpContext ctx) =>
 });
 
 // ─── Start ───────────────────────────────────────────────────────────
-Console.WriteLine($"╔════════════════════════════════════════════════════════╗");
-Console.WriteLine($"║   DeepSeek Copilot Proxy (Ultra)                       ║");
-Console.WriteLine($"╠════════════════════════════════════════════════════════╣");
-Console.WriteLine($"║  Version: 2026.06.02                                   ║");
+Console.WriteLine($"╔══════════════════════════════════════════════════════════════════╗");
+Console.WriteLine($"║   DeepSeek / Multi-Provider Copilot Proxy (Ultra)               ║");
+Console.WriteLine($"╠══════════════════════════════════════════════════════════════════╣");
+Console.WriteLine($"║  Version: 2026.06.02                                             ║");
 Console.WriteLine($"║  Default: {MODEL,-32}                                  ║");
-Console.WriteLine($"║  Models:  {string.Join(", ", AVAILABLE_MODELS),-32}    ║");
-Console.WriteLine($"║  URL:     http://localhost:{PORT}/v1                   ║");
+Console.WriteLine($"║  Providers: {string.Join(", ", PROVIDERS.Select(p => p.Name)),-32}                          ║");
+Console.WriteLine($"║  Models:   {string.Join(", ", AVAILABLE_MODELS),-32}                          ║");
+Console.WriteLine($"║  URL:     http://localhost:{PORT}/v1                             ║");
 Console.WriteLine($"║  Auth:    {(string.IsNullOrEmpty(PROXY_API_KEY) ? "open (no key set)" : "required (PROXY_API_KEY)"),-18} ║");
-Console.WriteLine($"╚════════════════════════════════════════════════════════╝");
+Console.WriteLine($"╚══════════════════════════════════════════════════════════════════╝");
 app.Run();
 
 // ══════════════════════════════════════════════════════════════════════
@@ -377,20 +435,28 @@ async Task RefreshAvailableModels(CancellationToken ct)
 {
     try
     {
-        string[] discovered = await TryGetModelsFromEndpoint("/v1/models", ct);
-        if (discovered.Length == 0)
-            discovered = await TryGetModelsFromEndpoint("/api/tags", ct);
+        Dictionary<string, ProviderInfo> newMap = new(StringComparer.OrdinalIgnoreCase);
+        List<string> allModels = [];
 
-        string[] merged = CONFIGURED_MODELS
-            .Concat(discovered)
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        foreach (ProviderInfo prov in PROVIDERS)
+        {
+            string[] discovered = await TryGetModelsFromProvider(prov.Client, ct);
+            foreach (string m in discovered)
+            {
+                if (!string.IsNullOrWhiteSpace(m) && !newMap.ContainsKey(m))
+                {
+                    newMap[m] = prov;
+                    allModels.Add(m);
+                }
+            }
+        }
 
-        if (merged.Length > 0)
-            AVAILABLE_MODELS = merged;
-
-        MODELS_LAST_REFRESH_UTC = DateTime.UtcNow;
+        if (allModels.Count > 0)
+        {
+            AVAILABLE_MODELS = allModels.ToArray();
+            MODEL_TO_PROVIDER = newMap;
+            MODELS_LAST_REFRESH_UTC = DateTime.UtcNow;
+        }
     }
     catch
     {
@@ -398,11 +464,11 @@ async Task RefreshAvailableModels(CancellationToken ct)
     }
 }
 
-async Task<string[]> TryGetModelsFromEndpoint(string endpoint, CancellationToken ct)
+async Task<string[]> TryGetModelsFromProvider(HttpClient client, CancellationToken ct)
 {
     try
     {
-        using HttpResponseMessage resp = await httpClient.GetAsync(endpoint, ct);
+        using HttpResponseMessage resp = await client.GetAsync("/v1/models", ct);
         if (!resp.IsSuccessStatusCode)
             return [];
 
@@ -451,20 +517,6 @@ string[] ExtractModels(JsonElement root)
         })
         .Where(x => !string.IsNullOrWhiteSpace(x))
         .Select(x => x!)
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToArray();
-}
-
-string[] ParseConfiguredModels(string? rawModels, string fallbackModel)
-{
-    IEnumerable<string> configured = string.IsNullOrWhiteSpace(rawModels)
-        ? []
-        : rawModels
-            .Split([',', ';', '\n', '\r'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-
-    return configured
-        .Prepend(fallbackModel)
-        .Where(x => !string.IsNullOrWhiteSpace(x))
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToArray();
 }
@@ -541,11 +593,7 @@ string? ModifyRequest(JsonDocument doc)
     if (!root.TryGetProperty("messages", out JsonElement msgs))
         return null;
 
-    // Extract requested model and resolve against available models
-    string requestedModel = root.TryGetProperty("model", out JsonElement reqModel)
-        && reqModel.ValueKind == JsonValueKind.String ? reqModel.GetString()! : MODEL;
-    string effectiveModel = ResolveModel(requestedModel);
-
+    // Keep model as-is for multi-provider routing; inject reasoning_content only
     int idx = 0;
     bool modified = false;
     using MemoryStream ms = new();
@@ -554,13 +602,6 @@ string? ModifyRequest(JsonDocument doc)
     w.WriteStartObject();
     foreach (JsonProperty prop in root.EnumerateObject())
     {
-        if (prop.NameEquals("model"))
-        {
-            w.WriteString("model", effectiveModel);
-            if (effectiveModel != requestedModel) modified = true;
-            continue;
-        }
-
         if (!prop.NameEquals("messages"))
         {
             prop.WriteTo(w);
@@ -736,7 +777,14 @@ async Task StreamAndCache(HttpResponseMessage upstream, HttpResponse downstream,
         {
             await writer.WriteLineAsync(line);
         }
-        
+
         await writer.FlushAsync(ct);
     }
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// Types
+// ══════════════════════════════════════════════════════════════════════
+
+record struct ProviderInfo(string Name, string ApiKey, string BaseUrl, HttpClient Client);
+
