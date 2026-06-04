@@ -9,6 +9,7 @@ Comprehensive testing documentation covering unit tests, integration tests, and 
 - [Test Suites](#test-suites)
   - [Endpoint Tests](#endpoint-tests)
   - [Parameter Validation Tests](#parameter-validation-tests)
+  - [Unit Test Files](#unit-test-files)
   - [Model Selection Tests](#model-selection-tests)
   - [Request Transformer Tests](#request-transformer-tests)
 - [Test Architecture](#test-architecture)
@@ -24,8 +25,8 @@ The proxy includes a comprehensive test suite covering:
 
 ### Test Statistics
 
-- **Total Tests:** 99
-- **Status:** ✅ All passing (99/99)
+- **Total Tests:** 182
+- **Status:** ✅ All passing (182/182)
 - **Coverage Areas:**
   - ✅ Endpoint routing (OpenAI & Ollama formats)
   - ✅ Parameter validation and filtering
@@ -33,6 +34,14 @@ The proxy includes a comprehensive test suite covering:
   - ✅ Request transformation logic
   - ✅ Streaming and non-streaming responses
   - ✅ Error handling and fallback logic
+  - ✅ Reasoning content caching
+  - ✅ JSON serialization defaults
+  - ✅ Provider registry and model resolution
+  - ✅ Proxy authentication middleware
+  - ✅ Ollama response building
+  - ✅ Provider HTTP client factory
+  - ✅ Model selection store
+  - ✅ Reasoning cache service
 
 ### Test Technologies
 
@@ -61,8 +70,9 @@ dotnet test
 # Run with verbose output
 dotnet test --verbosity quiet
 
-# Run specific test file
-dotnet test --filter ClassName=ParameterValidationTests
+# Run specific test suite
+dotnet test --filter "FullyQualifiedName~ParameterValidationTests"
+dotnet test --filter "FullyQualifiedName~ReasoningCacheServiceTests"
 
 # Run with coverage report
 dotnet test /p:CollectCoverage=true
@@ -141,14 +151,14 @@ public async Task GetModels_ReturnsOpenAiFormat()
 
 **File:** `tests/ProxyTests/ParameterValidationTests.cs`
 
-Validates that `RequestTransformer.ApplyExecutionDefaults()` correctly injects default parameters for every model/provider combination defined in `config/model-selection/*.json`.
+Validates that `RequestTransformer.ApplyExecutionDefaults()` correctly injects default parameters for every model/provider combination defined in `config/model-selection/*.json`. Only enabled models are tested against.
 
 #### Test Coverage
 
 **DeepSeek Models:**
 - ✅ `deepseek-v4-pro` — reasoning_effort injected, top_p omitted
 - ✅ `deepseek-v4-flash` — reasoning_effort injected, top_p omitted
-- ✅ `deepseek-coder-6.7b-instruct` — temperature & top_p, no reasoning_effort
+- ✅ `deepseek-coder-6.7b-instruct` — disabled in config, not tested
 
 **NVIDIA NIM Models:**
 - ✅ Reasoning parameters stripped (not supported)
@@ -174,7 +184,7 @@ Validates that `RequestTransformer.ApplyExecutionDefaults()` correctly injects d
 | deepseek-v4-pro | ✅ injected | ✅ injected | ❌ omitted | ❌ omitted | Valid |
 | gpt-5 | ❌ injected | ✅ injected | ✅ injected | ❌ filtered | Valid |
 | llama-3.3-70b | ❌ filtered | ✅ injected | ✅ injected | ✅ injected | Valid |
-| mixtral-8x7b | ❌ filtered | ✅ injected | ✅ injected | ✅ injected | Valid |
+| deepseek-v4-flash | ❌ filtered | ✅ injected | ✅ injected | ✅ injected | Valid |
 
 #### Test Execution
 
@@ -203,9 +213,43 @@ public void DeepSeek_ReasoningModels_OmitTopP()
 
 ---
 
+### Unit Test Files
+
+The following new test files have been added to significantly increase test coverage:
+
+**1. ReasoningCacheServiceTests** (`tests/ProxyTests/ReasoningCacheServiceTests.cs`)
+- 17 tests for reasoning content caching logic
+- Covers get/set operations, sequential keys, message/delta reasoning, tool calls, invalid JSON, and sequential call scenarios
+
+**2. JsonDefaultsTests** (`tests/ProxyTests/JsonDefaultsTests.cs`)
+- 9 tests for JSON serialization defaults
+- Covers snake_case naming, null handling, deserialization, round-trips, and nested objects
+
+**3. ProviderHttpClientFactoryTests** (`tests/ProxyTests/ProviderHttpClientFactoryTests.cs`)
+- 8 tests for HTTP client creation
+- Covers base address, auth headers, accept headers, OpenRouter headers, fallback env vars, timeouts
+
+**4. ProxyAuthenticationMiddlewareTests** (`tests/ProxyTests/ProxyAuthenticationMiddlewareTests.cs`)
+- 8 tests for authentication middleware
+- Covers null/empty key skipping, valid/invalid bearer tokens, missing auth, case-insensitive bearer, JSON content types
+
+**5. ProviderRegistryTests** (`tests/ProxyTests/ProviderRegistryTests.cs`)
+- 11 tests for provider registry
+- Covers provider/model resolution, default models, mapping updates, candidate resolution
+
+**6. OllamaResponseBuilderTests** (`tests/ProxyTests/OllamaResponseBuilderTests.cs`)
+- 15 tests for Ollama show response building
+- Covers model info, context length, capabilities, recommended parameters, model details
+
+**7. ModelSelectionStoreTests** (`tests/ProxyTests/ModelSelectionStoreTests.cs`)
+- 16 tests for model selection functionality
+- Covers execution config retrieval, provider selections, model entries, priorities
+
+---
+
 ### Model Selection Tests
 
-**File:** `tests/ProxyTests/ModelSelectionTests.cs`
+**File:** `tests/ProxyTests/ModelSelectionTests.cs` (deprecated, replaced by `ModelSelectionStoreTests.cs`)
 
 Validates that `ProviderRegistry` and `ModelCatalogService` correctly resolve model-to-provider candidates and apply defaults.
 
@@ -382,8 +426,14 @@ public void Dispose()
 |----------|-----------|------|
 | Testing HTTP endpoint behavior | Endpoint Test | `EndpointTests.cs` |
 | Testing parameter defaults | Parameter Validation | `ParameterValidationTests.cs` |
-| Testing model resolution/selection | Model Selection | `ModelSelectionTests.cs` |
+| Testing model resolution/selection | Model Selection | `ModelSelectionStoreTests.cs` |
 | Testing internal transformation logic | Request Transformer | `RequestTransformerTests.cs` |
+| Testing authentication middleware | Unit Test | `ProxyAuthenticationMiddlewareTests.cs` |
+| Testing reasoning cache | Unit Test | `ReasoningCacheServiceTests.cs` |
+| Testing HTTP client factory | Unit Test | `ProviderHttpClientFactoryTests.cs` |
+| Testing Ollama responses | Unit Test | `OllamaResponseBuilderTests.cs` |
+| Testing JSON serialization | Unit Test | `JsonDefaultsTests.cs` |
+| Testing provider registry | Unit Test | `ProviderRegistryTests.cs` |
 
 ### Step 2: Add Test Method
 
