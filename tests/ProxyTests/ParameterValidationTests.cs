@@ -159,6 +159,18 @@ public class ParameterValidationTests
     }
 
     [Theory]
+    [InlineData("gpt-4.1")]
+    [InlineData("gpt-4o")]
+    public void OpenAI_NonReasoningModels_NoReasoningEffort(string model)
+    {
+        RequestTransformer sut = CreateTransformer();
+        JsonElement result = Transform(sut, model, "openai");
+
+        Assert.False(result.TryGetProperty("reasoning_effort", out _),
+            $"OpenAI/{model}: reasoning_effort must NOT be injected (not a reasoning model)");
+    }
+
+    [Theory]
     [InlineData("gpt-5")]
     [InlineData("gpt-5-mini")]
     public void OpenAI_ReasoningModels_NoTopPAlongReasoningEffort(string model)
@@ -223,6 +235,101 @@ public class ParameterValidationTests
             $"OpenRouter/{model}: reasoning_effort must NOT be sent");
     }
 
+    // ---------- Moonshot / Kimi ----------
+
+    [Theory]
+    [InlineData("kimi-k2.6")]
+    [InlineData("moonshot-v1-128k")]
+    [InlineData("moonshot-v1-auto")]
+    [InlineData("moonshot-v1-32k")]
+    [InlineData("moonshot-v1-8k")]
+    public void Moonshot_Models_MaxTokensInjected(string model)
+    {
+        RequestTransformer sut = CreateTransformer();
+        JsonElement result = Transform(sut, model, "moonshot");
+
+        Assert.True(result.TryGetProperty("max_tokens", out JsonElement maxTok),
+            $"Moonshot/{model}: max_tokens should be injected from config");
+        Assert.True(maxTok.GetInt32() > 0,
+            $"Moonshot/{model}: max_tokens must be positive");
+    }
+
+    [Theory]
+    [InlineData("kimi-k2.6")]
+    [InlineData("moonshot-v1-128k")]
+    [InlineData("moonshot-v1-auto")]
+    [InlineData("moonshot-v1-32k")]
+    [InlineData("moonshot-v1-8k")]
+    public void Moonshot_Models_NoReasoningEffortLeakage(string model)
+    {
+        RequestTransformer sut = CreateTransformer();
+        JsonElement result = Transform(sut, model, "moonshot");
+
+        Assert.False(result.TryGetProperty("reasoning_effort", out _),
+            $"Moonshot/{model}: reasoning_effort must NOT be sent (not supported by Moonshot/Kimi API)");
+    }
+
+    [Theory]
+    [InlineData("kimi-k2.6")]
+    [InlineData("moonshot-v1-128k")]
+    public void Moonshot_Models_TemperatureInjected(string model)
+    {
+        RequestTransformer sut = CreateTransformer();
+        JsonElement result = Transform(sut, model, "moonshot");
+
+        Assert.True(result.TryGetProperty("temperature", out JsonElement temp),
+            $"Moonshot/{model}: temperature should be injected from config");
+        Assert.True(temp.GetDouble() > 0,
+            $"Moonshot/{model}: temperature must be a positive value");
+    }
+
+    [Theory]
+    [InlineData("kimi-k2.6")]
+    [InlineData("moonshot-v1-128k")]
+    [InlineData("moonshot-v1-8k")]
+    public void Moonshot_Models_TopPInjected(string model)
+    {
+        RequestTransformer sut = CreateTransformer();
+        JsonElement result = Transform(sut, model, "moonshot");
+
+        Assert.True(result.TryGetProperty("top_p", out JsonElement topP),
+            $"Moonshot/{model}: top_p should be injected from config");
+        Assert.True(topP.GetDouble() > 0,
+            $"Moonshot/{model}: top_p must be a positive value");
+    }
+
+    // ---------- top_k filtering ----------
+
+    [Theory]
+    [InlineData("deepseek-v4-pro",   "deepseek")]
+    [InlineData("gpt-5",             "openai")]
+    [InlineData("deepseek-coder-6.7b-instruct", "deepseek")]
+    [InlineData("kimi-k2.6",         "moonshot")]
+    public void TopK_IsFiltered_ForNonSupportingProviders(string model, string provider)
+    {
+        RequestTransformer sut = CreateTransformer();
+        string body   = """{"model":"x","messages":[{"role":"user","content":"hi"}],"top_k":50}""";
+        JsonElement result = TransformWithBody(sut, body, model, provider);
+
+        Assert.False(result.TryGetProperty("top_k", out _),
+            $"{provider}/{model}: top_k must be filtered out (not supported by {provider})");
+    }
+
+    [Theory]
+    [InlineData("qwen/qwen3-coder-480b-a35b-instruct", "nvidia")]
+    [InlineData("llama-3.3-70b-versatile",              "groq")]
+    [InlineData("nvidia/nemotron-3-super-120b-a12b",    "openrouter")]
+    public void TopK_IsPreserved_ForSupportingProviders(string model, string provider)
+    {
+        RequestTransformer sut = CreateTransformer();
+        string body   = """{"model":"x","messages":[{"role":"user","content":"hi"}],"top_k":50}""";
+        JsonElement result = TransformWithBody(sut, body, model, provider);
+
+        Assert.True(result.TryGetProperty("top_k", out JsonElement topK),
+            $"{provider}/{model}: top_k should be preserved (supported by {provider})");
+        Assert.Equal(50, topK.GetInt32());
+    }
+
     // ---------- Provider-agnostic: client-supplied values are never overridden ----------
 
     [Theory]
@@ -230,6 +337,7 @@ public class ParameterValidationTests
     [InlineData("deepseek-v4-flash", "deepseek")]
     [InlineData("gpt-5",             "openai")]
     [InlineData("llama-3.3-70b-versatile", "groq")]
+    [InlineData("kimi-k2.6",         "moonshot")]
     public void ClientSupplied_MaxTokens_IsNotOverridden(string model, string provider)
     {
         RequestTransformer sut = CreateTransformer();
@@ -259,6 +367,7 @@ public class ParameterValidationTests
     [InlineData("deepseek-coder-6.7b-instruct", "deepseek")]
     [InlineData("qwen/qwen3.5-397b-a17b",        "nvidia")]
     [InlineData("llama-3.3-70b-versatile",        "groq")]
+    [InlineData("kimi-k2.6",                      "moonshot")]
     public void ClientSupplied_Temperature_IsNotOverridden(string model, string provider)
     {
         RequestTransformer sut = CreateTransformer();
@@ -268,6 +377,20 @@ public class ParameterValidationTests
         Assert.True(result.TryGetProperty("temperature", out JsonElement temp),
             $"{provider}/{model}: temperature must be present");
         Assert.Equal(0.99, temp.GetDouble(), precision: 5);
+    }
+
+    [Theory]
+    [InlineData("nvidia/nemotron-3-super-120b-a12b", "nvidia")]
+    [InlineData("llama-3.3-70b-versatile",            "groq")]
+    public void ClientSupplied_TopK_IsNotOverridden_ForSupportingProviders(string model, string provider)
+    {
+        RequestTransformer sut = CreateTransformer();
+        string body   = """{"model":"x","messages":[],"top_k":42}""";
+        JsonElement result = TransformWithBody(sut, body, model, provider);
+
+        Assert.True(result.TryGetProperty("top_k", out JsonElement topK),
+            $"{provider}/{model}: top_k must be present");
+        Assert.Equal(42, topK.GetInt32());
     }
 
     // ---------- Context-window config completeness ----------
@@ -292,6 +415,12 @@ public class ParameterValidationTests
     [InlineData("gpt-4o",     128_000,   8_192)]
     // Groq
     [InlineData("meta-llama/llama-4-scout-17b-16e-instruct", 10_000_000, 0)]
+    // Moonshot / Kimi
+    [InlineData("kimi-k2.6",          262_144, 262_144)]
+    [InlineData("moonshot-v1-128k",   128_000,  32_768)]
+    [InlineData("moonshot-v1-auto",   128_000,  32_768)]
+    [InlineData("moonshot-v1-32k",     32_768,   8_192)]
+    [InlineData("moonshot-v1-8k",       8_192,   4_096)]
     public void AllModels_HaveCorrectContextWindowConfig(
         string model, int expectedContextLength, int minMaxOutput)
     {
@@ -324,6 +453,8 @@ public class ParameterValidationTests
         Assert.False(string.IsNullOrWhiteSpace(exec.ReasoningEffort),
             $"{model}: reasoning_effort should be configured in deepseek.json");
 
+        // DeepSeek API docs: valid values are "high" and "max"
+        // (the proxy maps "low"/"medium" to "high" and "xhigh" to "max")
         string[] valid = ["low", "medium", "high", "default"];
         Assert.Contains(exec.ReasoningEffort, valid);
     }
@@ -335,6 +466,7 @@ public class ParameterValidationTests
     [InlineData("qwen/qwen3-coder-480b-a35b-instruct", "nvidia")]
     [InlineData("llama-3.3-70b-versatile", "groq")]
     [InlineData("qwen/qwen3-coder:free", "openrouter")]
+    [InlineData("kimi-k2.6", "moonshot")]
     public void ConfiguredTemperature_IsWithinValidRange(string model, string provider)
     {
         _ = provider; // documented for readability
@@ -346,5 +478,25 @@ public class ParameterValidationTests
         double t = exec.Temperature.Value;
         Assert.True(t is >= 0.0 and <= 2.0,
             $"{model}: temperature {t} is outside [0, 2.0]");
+    }
+
+    // ---------- All config files have non-empty model lists ----------
+
+    [Fact]
+    public void AllProviderConfigFiles_HaveAtLeastOneModel()
+    {
+        ModelSelectionStore store = new();
+        var providers = store.ProviderModelSelections;
+
+        Assert.True(providers.Count >= 6,
+            $"Expected at least 6 provider configs (deepseek, openai, nvidia, groq, openrouter, moonshot), got {providers.Count}");
+
+        string[] expected = ["deepseek", "openai", "nvidia", "groq", "openrouter", "moonshot"];
+        foreach (string name in expected)
+        {
+            Assert.True(providers.ContainsKey(name),
+                $"Missing provider config: {name}");
+            Assert.NotEmpty(providers[name]);
+        }
     }
 }

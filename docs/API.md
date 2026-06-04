@@ -190,8 +190,10 @@ data: [DONE]
 
 **Notes:**
 - `reasoning_effort` is only supported by DeepSeek and OpenAI (o-series) models. The proxy automatically filters this parameter for unsupported providers.
-- When `reasoning_effort` is set, `top_p` is omitted per DeepSeek/OpenAI documentation.
+- When `reasoning_effort` is set, `top_p` is omitted per DeepSeek/OpenAI documentation to avoid undefined behavior.
+- `top_k` is automatically filtered for providers that do not support it: DeepSeek, OpenAI, and Moonshot/Kimi. It is preserved for NVIDIA, Groq, and OpenRouter.
 - The proxy caches `reasoning_content` from DeepSeek responses and reinjects it on subsequent assistant messages.
+- Supported providers: DeepSeek, OpenAI, NVIDIA NIM, Groq, OpenRouter, Ollama Cloud, Moonshot/Kimi.
 
 ---
 

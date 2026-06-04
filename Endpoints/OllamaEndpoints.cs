@@ -76,7 +76,8 @@ internal static class OllamaEndpoints
             ProviderRegistry providerRegistry,
             ModelCatalogService modelCatalog,
             ChatStreamingService chatStreaming,
-            ReasoningCacheService reasoningCache) =>
+            ReasoningCacheService reasoningCache,
+            RequestTransformer requestTransformer) =>
         {
             CancellationToken ct = ctx.RequestAborted;
             await modelCatalog.RefreshAvailableModelsIfNeeded(ct);
@@ -86,37 +87,6 @@ internal static class OllamaEndpoints
             JsonElement root = doc.RootElement;
             bool isStream = root.TryGetProperty("stream", out JsonElement sp) && sp.GetBoolean();
 
-            List<object> messages = [];
-            if (root.TryGetProperty("messages", out JsonElement omsgs))
-            {
-                foreach (JsonElement msg in omsgs.EnumerateArray())
-                {
-                    string role = msg.GetProperty("role").GetString()!;
-                    string text = msg.TryGetProperty("content", out JsonElement c) ? c.GetString() ?? "" : "";
-
-                    object content;
-                    if (msg.TryGetProperty("images", out JsonElement imgs) && imgs.GetArrayLength() > 0)
-                    {
-                        List<object> parts = [new { type = "text", text }];
-                        foreach (JsonElement img in imgs.EnumerateArray())
-                        {
-                            string url = img.GetString()!;
-                            if (!url.StartsWith("data:") && !url.StartsWith("http"))
-                                url = $"data:image/png;base64,{url}";
-                            parts.Add(new { type = "image_url", image_url = new { url } });
-                        }
-
-                        content = parts;
-                    }
-                    else
-                    {
-                        content = text;
-                    }
-
-                    messages.Add(new { role, content });
-                }
-            }
-
             string ollamaRequestedModel = root.TryGetProperty("model", out JsonElement om) && om.ValueKind == JsonValueKind.String
                 ? om.GetString()! : providerRegistry.DefaultModel;
             string ollamaEffectiveModel = providerRegistry.ResolveModel(ollamaRequestedModel);
@@ -124,28 +94,10 @@ internal static class OllamaEndpoints
             ProviderInfo ollamaProvider = providerRegistry.ResolveProvider(ollamaEffectiveModel);
             ModelExecutionConfig ollamaExec = modelCatalog.GetExecutionConfigForModel(ollamaEffectiveModel);
 
-            Dictionary<string, object?> reqObj = new()
-            {
-                ["model"] = ollamaUpstreamModel,
-                ["messages"] = messages,
-                ["stream"] = isStream,
-                ["max_tokens"] = ollamaExec.MaxTokensPreferred ?? 8192
-            };
-            if (root.TryGetProperty("tools", out JsonElement tools))
-                reqObj["tools"] = tools;
-
-            if (ollamaExec.Temperature.HasValue)
-                reqObj["temperature"] = ollamaExec.Temperature.Value;
-            if (ollamaExec.TopP.HasValue)
-                reqObj["top_p"] = ollamaExec.TopP.Value;
-            if (!string.IsNullOrWhiteSpace(ollamaExec.ReasoningEffort))
-                reqObj["reasoning_effort"] = ollamaExec.ReasoningEffort;
-
-            string reqJson = JsonSerializer.Serialize(reqObj, JsonDefaults.SnakeCase);
-            using StringContent reqContent = new(reqJson, Encoding.UTF8, "application/json");
             using CancellationTokenSource? ollamaTimeoutCts = modelCatalog.CreateModelTimeoutCts(ollamaEffectiveModel, ct);
             CancellationToken ollamaCt = ollamaTimeoutCts?.Token ?? ct;
 
+            // ── Ollama Cloud / Native Ollama passthrough ──────────────────
             if (ollamaProvider.Name.Equals("ollama", StringComparison.OrdinalIgnoreCase))
             {
                 string upstreamBody = ReplaceModelInOllamaRequestBody(body, ollamaUpstreamModel);
@@ -184,6 +136,13 @@ internal static class OllamaEndpoints
                 return;
             }
 
+            // ── Convert Ollama → OpenAI request ──────────────────────────
+            string openAiBody = ConvertOllamaToOpenAi(body, ollamaUpstreamModel, isStream);
+            // Apply execution defaults with provider-aware parameter filtering
+            openAiBody = requestTransformer.ApplyExecutionDefaults(openAiBody, ollamaEffectiveModel, ollamaProvider.Name);
+
+            using StringContent reqContent = new(openAiBody, Encoding.UTF8, "application/json");
+
             if (!isStream)
             {
                 using HttpResponseMessage resp = await ollamaProvider.Client.SendAsync(
@@ -193,6 +152,7 @@ internal static class OllamaEndpoints
                 if (!resp.IsSuccessStatusCode)
                 {
                     ctx.Response.StatusCode = (int)resp.StatusCode;
+                    ctx.Response.ContentType = "application/json";
                     await ctx.Response.WriteAsync(respBody, ct);
                     return;
                 }
@@ -248,6 +208,136 @@ internal static class OllamaEndpoints
         });
 
         return app;
+    }
+
+    /// <summary>
+    /// Converts an Ollama API request body into an OpenAI-compatible request body.
+    /// Preserves client-supplied parameters from the Ollama "options" block.
+    /// Handles message content with embedded images (converts Ollama format to OpenAI multi-part format).
+    /// </summary>
+    private static string ConvertOllamaToOpenAi(string ollamaBody, string upstreamModel, bool isStream)
+    {
+        using JsonDocument doc = JsonDocument.Parse(ollamaBody);
+        JsonElement root = doc.RootElement;
+
+        using MemoryStream ms = new();
+        using Utf8JsonWriter writer = new(ms);
+
+        writer.WriteStartObject();
+        writer.WriteString("model", upstreamModel);
+        writer.WriteBoolean("stream", isStream);
+
+        // ── Messages (handle Ollama images → OpenAI multi-part content) ──
+        if (root.TryGetProperty("messages", out JsonElement omsgs) && omsgs.ValueKind == JsonValueKind.Array)
+        {
+            writer.WritePropertyName("messages");
+            writer.WriteStartArray();
+
+            foreach (JsonElement msg in omsgs.EnumerateArray())
+            {
+                writer.WriteStartObject();
+                bool hasImages = msg.TryGetProperty("images", out JsonElement imgs) && imgs.GetArrayLength() > 0;
+
+                foreach (JsonProperty mp in msg.EnumerateObject())
+                {
+                    if (mp.NameEquals("content") && hasImages)
+                    {
+                        string text = mp.Value.GetString() ?? "";
+                        writer.WritePropertyName("content");
+                        writer.WriteStartArray();
+                        writer.WriteStartObject();
+                        writer.WriteString("type", "text");
+                        writer.WriteString("text", text);
+                        writer.WriteEndObject();
+                        foreach (JsonElement img in imgs.EnumerateArray())
+                        {
+                            string url = img.GetString()!;
+                            if (!url.StartsWith("data:") && !url.StartsWith("http"))
+                                url = $"data:image/png;base64,{url}";
+                            writer.WriteStartObject();
+                            writer.WriteString("type", "image_url");
+                            writer.WritePropertyName("image_url");
+                            writer.WriteStartObject();
+                            writer.WriteString("url", url);
+                            writer.WriteEndObject();
+                            writer.WriteEndObject();
+                        }
+                        writer.WriteEndArray();
+                    }
+                    else if (mp.NameEquals("images"))
+                    {
+                        // Already handled inside "content" above
+                        continue;
+                    }
+                    else
+                    {
+                        mp.WriteTo(writer);
+                    }
+                }
+
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
+        }
+
+        // ── Tools ──
+        if (root.TryGetProperty("tools", out JsonElement tools))
+        {
+            writer.WritePropertyName("tools");
+            tools.WriteTo(writer);
+        }
+
+        // ── Preserve client-supplied parameters from Ollama's "options" block ──
+        // Ollama format: "options": { "temperature": 0.7, "top_p": 0.9, "num_predict": 4096 }
+        bool hasOptionsBlock = root.TryGetProperty("options", out JsonElement options) && options.ValueKind == JsonValueKind.Object;
+
+        if (hasOptionsBlock)
+        {
+            foreach (JsonProperty opt in options.EnumerateObject())
+            {
+                if (opt.NameEquals("num_predict"))
+                {
+                    writer.WriteNumber("max_tokens", opt.Value.GetInt32());
+                }
+                else if (opt.NameEquals("num_ctx") || opt.NameEquals("repeat_penalty") ||
+                         opt.NameEquals("repeat_last_n") || opt.NameEquals("mirostat") ||
+                         opt.NameEquals("mirostat_tau") || opt.NameEquals("mirostat_eta") ||
+                         opt.NameEquals("penalize_newline") || opt.NameEquals("stop") ||
+                         opt.NameEquals("tfs_z") || opt.NameEquals("typical_p") ||
+                         opt.NameEquals("use_mmap") || opt.NameEquals("use_mlock") ||
+                         opt.NameEquals("num_thread") || opt.NameEquals("num_gpu") ||
+                         opt.NameEquals("seed") || opt.NameEquals("num_batch") ||
+                         opt.NameEquals("num_keep") || opt.NameEquals("f16_kv"))
+                {
+                    // Skip Ollama-specific options that have no OpenAI equivalent
+                    continue;
+                }
+                else
+                {
+                    opt.WriteTo(writer);
+                }
+            }
+        }
+        else
+        {
+            // No options block — check for top-level Ollama params (model, stream, messages, etc. already handled)
+            foreach (JsonProperty prop in root.EnumerateObject())
+            {
+                string name = prop.Name;
+                if (name == "model" || name == "stream" || name == "messages" ||
+                    name == "tools" || name == "options" || name == "keep_alive" ||
+                    name == "format" || name == "raw")
+                {
+                    continue;
+                }
+                prop.WriteTo(writer);
+            }
+        }
+
+        writer.WriteEndObject();
+        writer.Flush();
+        return Encoding.UTF8.GetString(ms.ToArray());
     }
 
     private static string ReplaceModelInOllamaRequestBody(string rawBody, string upstreamModel)

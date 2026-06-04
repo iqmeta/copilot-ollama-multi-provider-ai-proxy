@@ -7,103 +7,78 @@
       "enabled": true,
       "execution": {
         "context_length": 262144,
-        "max_output_tokens": 131072,
+        "max_output_tokens": 262144,
         "supports_tools": true,
         "supports_vision": false,
-        "family": "kimi",
-        "temperature": 1.0,
-        "top_p": 0.95,
-        "max_tokens": 4096,
-        "timeout_seconds": 180
-      }
-    },
-    {
-      "match": "kimi-k2.5",
-      "priority": 2,
-      "enabled": true,
-      "execution": {
-        "context_length": 262144,
-        "max_output_tokens": 65536,
-        "supports_tools": true,
-        "supports_vision": false,
-        "family": "kimi",
-        "temperature": 0.3,
+        "family": "moonshotai",
+        "temperature": 0.25,
         "top_p": 0.9,
         "max_tokens": 4096,
-        "timeout_seconds": 120
+        "timeout_seconds": 60
       }
     },
     {
       "match": "moonshot-v1-128k",
-      "priority": 3,
+      "priority": 2,
       "enabled": true,
       "execution": {
-        "context_length": 131072,
+        "context_length": 128000,
         "max_output_tokens": 32768,
         "supports_tools": true,
-        "supports_vision": false,
-        "family": "moonshot",
+        "supports_vision": true,
+        "family": "moonshotai",
         "temperature": 0.3,
         "top_p": 0.9,
         "max_tokens": 4096,
-        "timeout_seconds": 90
+        "timeout_seconds": 60
       }
     },
     {
       "match": "moonshot-v1-auto",
-      "priority": 4,
+      "priority": 3,
       "enabled": true,
       "execution": {
-        "context_length": 131072,
+        "context_length": 128000,
         "max_output_tokens": 32768,
         "supports_tools": true,
         "supports_vision": false,
-        "family": "moonshot",
+        "family": "moonshotai",
         "temperature": 0.3,
         "top_p": 0.9,
         "max_tokens": 4096,
-        "timeout_seconds": 90
+        "timeout_seconds": 60
       }
     },
     {
       "match": "moonshot-v1-32k",
-      "priority": 5,
-      "enabled": false,
+      "priority": 4,
+      "enabled": true,
       "execution": {
         "context_length": 32768,
         "max_output_tokens": 8192,
-        "family": "moonshot",
+        "supports_tools": true,
+        "supports_vision": true,
+        "family": "moonshotai",
         "temperature": 0.3,
+        "top_p": 0.9,
         "max_tokens": 4096,
         "timeout_seconds": 60
       }
     },
     {
       "match": "moonshot-v1-8k",
-      "priority": 6,
-      "enabled": false,
+      "priority": 5,
+      "enabled": true,
       "execution": {
         "context_length": 8192,
         "max_output_tokens": 4096,
-        "family": "moonshot",
-        "temperature": 0.3,
-        "max_tokens": 2048,
-        "timeout_seconds": 30
-      }
-    },
-    {
-      "match": "moonshot-v1-vision",
-      "priority": 7,
-      "enabled": false,
-      "execution": {
-        "context_length": 131072,
-        "max_output_tokens": 32768,
         "supports_tools": true,
         "supports_vision": true,
-        "family": "moonshot",
+        "family": "moonshotai",
         "temperature": 0.3,
-        "max_tokens": 4096,
-        "timeout_seconds": 90
+        "top_p": 0.9,
+        "max_tokens": 2048,
+        "timeout_seconds": 30
       }
     }
   ]

@@ -33,6 +33,11 @@ internal sealed class RequestTransformer
         // (i.e. the model is a native reasoner) only emit temperature, not top_p.
         bool isNativeReasoner = supportsReasoningEffort && !string.IsNullOrWhiteSpace(exec.ReasoningEffort);
 
+        // Providers that do NOT support top_k: DeepSeek, OpenAI (including all OpenAI-derived models).
+        // Providers that DO support top_k: NVIDIA, Groq, OpenRouter (passthrough).
+        bool supportsTopK = p is "nvidia" or "groq" or "openrouter";
+        // If provider is unknown, assume top_k is supported (lenient fallback).
+
         try
         {
             using JsonDocument original = JsonDocument.Parse(rawBody);
@@ -53,6 +58,11 @@ internal sealed class RequestTransformer
                 else if (prop.NameEquals("top_p")) hasTopP = true;
                 else if (prop.NameEquals("max_tokens")) hasMaxTokens = true;
                 else if (prop.NameEquals("reasoning_effort")) hasReasoningEffort = true;
+                else if (prop.NameEquals("top_k") && !supportsTopK)
+                {
+                    // Skip top_k for providers that don't support it
+                    continue;
+                }
 
                 prop.WriteTo(writer);
             }
