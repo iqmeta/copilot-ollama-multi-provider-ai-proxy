@@ -1,0 +1,37 @@
+{
+  "provider": "ollamacloud",
+  "models": [
+    {
+      "match": "gemma3:4b",
+      "priority": 1,
+      "enabled": true,
+      "execution": {
+        "context_length": 8192,
+        "max_output_tokens": 4096,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "google",
+        "temperature": 0.3,
+        "top_p": 0.9,
+        "max_tokens": 4096,
+        "timeout_seconds": 60
+      }
+    },
+    {
+      "match": "nemotron-3-super",
+      "priority": 2,
+      "enabled": true,
+      "execution": {
+        "context_length": 1000000,
+        "max_output_tokens": 16384,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "nvidia",
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "max_tokens": 8192,
+        "timeout_seconds": 120
+      }
+    }
+  ]
+}

@@ -227,6 +227,37 @@ public class ParameterValidationTests
     }
 
     // ──────────────────────────────────────────────
+    // Ollama Cloud — 2 modelos habilitados
+    //   Ninguno soporta reasoning_effort
+    // ──────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("gemma3:4b")]
+    [InlineData("nemotron-3-super")]
+    public void OllamaCloud_Models_MaxTokensInjected(string model)
+    {
+        RequestTransformer sut = CreateTransformer();
+        JsonElement result = Transform(sut, model, "ollamacloud");
+
+        Assert.True(result.TryGetProperty("max_tokens", out JsonElement maxTok),
+            $"OllamaCloud/{model}: max_tokens should be injected from config");
+        Assert.True(maxTok.GetInt32() > 0,
+            $"OllamaCloud/{model}: max_tokens must be positive");
+    }
+
+    [Theory]
+    [InlineData("gemma3:4b")]
+    [InlineData("nemotron-3-super")]
+    public void OllamaCloud_Models_NoReasoningEffortLeakage(string model)
+    {
+        RequestTransformer sut = CreateTransformer();
+        JsonElement result = Transform(sut, model, "ollamacloud");
+
+        Assert.False(result.TryGetProperty("reasoning_effort", out _),
+            $"OllamaCloud/{model}: reasoning_effort must NOT be sent (not supported by Ollama Cloud API)");
+    }
+
+    // ──────────────────────────────────────────────
     // OpenRouter — 2 modelos free habilitados
     //   No inyecta reasoning_effort (passthrough)
     // ──────────────────────────────────────────────
