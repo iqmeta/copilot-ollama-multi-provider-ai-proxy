@@ -32,6 +32,38 @@
         "max_tokens": 4096,
         "timeout_seconds": 60
       }
+    },
+    {
+      "match": "meta-llama/llama-4-scout-17b-16e-instruct",
+      "priority": 3,
+      "enabled": true,
+      "execution": {
+        "context_length": 10000000,
+        "max_output_tokens": 16384,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "meta",
+        "temperature": 0.3,
+        "top_p": 0.9,
+        "max_tokens": 4096,
+        "timeout_seconds": 45
+      }
+    },
+    {
+      "match": "openai/gpt-oss-120b",
+      "priority": 4,
+      "enabled": true,
+      "execution": {
+        "context_length": 131072,
+        "max_output_tokens": 16384,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "openai",
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "max_tokens": 8192,
+        "timeout_seconds": 90
+      }
     }
   ]
 }

@@ -50,8 +50,24 @@
       }
     },
     {
-      "match": "nvidia/nemotron-3-super-120b-a12b",
+      "match": "nvidia/nemotron-3-ultra-550b-a55b",
       "priority": 4,
+      "enabled": true,
+      "execution": {
+        "context_length": 1000000,
+        "max_output_tokens": 262144,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "nvidia",
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "max_tokens": 8192,
+        "timeout_seconds": 180
+      }
+    },
+    {
+      "match": "nvidia/nemotron-3-super-120b-a12b",
+      "priority": 5,
       "enabled": true,
       "execution": {
         "context_length": 1000000,
@@ -66,8 +82,24 @@
       }
     },
     {
+      "match": "nvidia/llama-3.1-nemotron-70b-instruct",
+      "priority": 6,
+      "enabled": true,
+      "execution": {
+        "context_length": 131072,
+        "max_output_tokens": 16384,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "nvidia",
+        "temperature": 0.3,
+        "top_p": 0.9,
+        "max_tokens": 4096,
+        "timeout_seconds": 90
+      }
+    },
+    {
       "match": "openai/gpt-oss-120b",
-      "priority": 5,
+      "priority": 7,
       "enabled": true,
       "execution": {
         "context_length": 131072,
@@ -83,7 +115,7 @@
     },
     {
       "match": "nvidia/llama-3.3-nemotron-super-49b-v1.5",
-      "priority": 6,
+      "priority": 8,
       "enabled": true,
       "execution": {
         "context_length": 131072,

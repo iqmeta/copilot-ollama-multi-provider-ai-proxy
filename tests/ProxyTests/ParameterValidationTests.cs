@@ -104,7 +104,9 @@ public class ParameterValidationTests
         "deepseek-ai/deepseek-v4-pro",
         "qwen/qwen3-coder-480b-a35b-instruct",
         "qwen/qwen3.5-397b-a17b",
+        "nvidia/nemotron-3-ultra-550b-a55b",
         "nvidia/nemotron-3-super-120b-a12b",
+        "nvidia/llama-3.1-nemotron-70b-instruct",
         "openai/gpt-oss-120b",
         "nvidia/llama-3.3-nemotron-super-49b-v1.5"
     ];
@@ -583,10 +585,11 @@ public class ParameterValidationTests
     [Theory]
     [InlineData("deepseek", 3)]
     [InlineData("openai", 4)]
-    [InlineData("nvidia", 6)]
-    [InlineData("groq", 2)]
+    [InlineData("nvidia", 8)]
+    [InlineData("groq", 4)]
     [InlineData("openrouter", 2)]
     [InlineData("moonshot", 5)]
+    [InlineData("ollamacloud", 2)]
     public void EnabledModelCount_IsCorrect(string providerName, int expectedEnabled)
     {
         ModelSelectionStore store = new();
