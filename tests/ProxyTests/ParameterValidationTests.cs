@@ -191,8 +191,6 @@ public class ParameterValidationTests
     [Theory]
     [InlineData("llama-3.3-70b-versatile")]
     [InlineData("qwen/qwen3-32b")]
-    [InlineData("meta-llama/llama-4-scout-17b-16e-instruct")]
-    [InlineData("llama-3.1-8b-instant")]
     public void Groq_Models_NoReasoningEffortLeakage(string model)
     {
         RequestTransformer sut = CreateTransformer();

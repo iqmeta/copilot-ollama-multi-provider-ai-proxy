@@ -2,24 +2,8 @@
   "provider": "groq",
   "models": [
     {
-      "match": "openai/gpt-oss-120b",
-      "priority": 1,
-      "enabled": false,
-      "execution": {
-        "context_length": 131072,
-        "max_output_tokens": 16384,
-        "supports_tools": true,
-        "supports_vision": false,
-        "family": "openai",
-        "temperature": 0.2,
-        "top_p": 0.9,
-        "max_tokens": 8192,
-        "timeout_seconds": 90
-      }
-    },
-    {
       "match": "llama-3.3-70b-versatile",
-      "priority": 2,
+      "priority": 1,
       "enabled": true,
       "execution": {
         "context_length": 131072,
@@ -29,13 +13,13 @@
         "family": "meta",
         "temperature": 0.3,
         "top_p": 0.9,
-        "max_tokens": 4096,
+        "max_tokens": 8192,
         "timeout_seconds": 60
       }
     },
     {
       "match": "qwen/qwen3-32b",
-      "priority": 3,
+      "priority": 2,
       "enabled": true,
       "execution": {
         "context_length": 131072,
@@ -47,38 +31,6 @@
         "top_p": 0.95,
         "max_tokens": 4096,
         "timeout_seconds": 60
-      }
-    },
-    {
-      "match": "meta-llama/llama-4-scout-17b-16e-instruct",
-      "priority": 4,
-      "enabled": true,
-      "execution": {
-        "context_length": 10000000,
-        "max_output_tokens": 16384,
-        "supports_tools": true,
-        "supports_vision": false,
-        "family": "meta",
-        "temperature": 0.3,
-        "top_p": 0.9,
-        "max_tokens": 4096,
-        "timeout_seconds": 45
-      }
-    },
-    {
-      "match": "llama-3.1-8b-instant",
-      "priority": 5,
-      "enabled": true,
-      "execution": {
-        "context_length": 131072,
-        "max_output_tokens": 8192,
-        "supports_tools": true,
-        "supports_vision": false,
-        "family": "meta",
-        "temperature": 0.3,
-        "top_p": 0.9,
-        "max_tokens": 2048,
-        "timeout_seconds": 30
       }
     }
   ]

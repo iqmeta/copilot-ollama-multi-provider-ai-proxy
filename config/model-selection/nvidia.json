@@ -18,24 +18,8 @@
       }
     },
     {
-      "match": "deepseek-ai/deepseek-v4-flash",
-      "priority": 2,
-      "enabled": false,
-      "execution": {
-        "context_length": 1048576,
-        "max_output_tokens": 131072,
-        "supports_tools": true,
-        "supports_vision": false,
-        "family": "deepseek",
-        "temperature": 0.2,
-        "top_p": 0.9,
-        "max_tokens": 4096,
-        "timeout_seconds": 90
-      }
-    },
-    {
       "match": "qwen/qwen3-coder-480b-a35b-instruct",
-      "priority": 3,
+      "priority": 2,
       "enabled": true,
       "execution": {
         "context_length": 1048576,
@@ -51,7 +35,7 @@
     },
     {
       "match": "qwen/qwen3.5-397b-a17b",
-      "priority": 4,
+      "priority": 3,
       "enabled": true,
       "execution": {
         "context_length": 262144,
@@ -66,40 +50,8 @@
       }
     },
     {
-      "match": "qwen/qwen3.5-122b-a10b",
-      "priority": 5,
-      "enabled": false,
-      "execution": {
-        "context_length": 262144,
-        "max_output_tokens": 16384,
-        "supports_tools": true,
-        "supports_vision": false,
-        "family": "qwen",
-        "temperature": 0.2,
-        "top_p": 0.95,
-        "max_tokens": 4096,
-        "timeout_seconds": 60
-      }
-    },
-    {
-      "match": "qwen/qwen3-next-80b-a3b-instruct",
-      "priority": 6,
-      "enabled": true,
-      "execution": {
-        "context_length": 262144,
-        "max_output_tokens": 16384,
-        "supports_tools": true,
-        "supports_vision": false,
-        "family": "qwen",
-        "temperature": 0.2,
-        "top_p": 0.95,
-        "max_tokens": 4096,
-        "timeout_seconds": 60
-      }
-    },
-    {
       "match": "nvidia/nemotron-3-super-120b-a12b",
-      "priority": 7,
+      "priority": 4,
       "enabled": true,
       "execution": {
         "context_length": 1000000,
@@ -109,13 +61,13 @@
         "family": "nvidia",
         "temperature": 0.2,
         "top_p": 0.9,
-        "max_tokens": 4096,
+        "max_tokens": 8192,
         "timeout_seconds": 120
       }
     },
     {
       "match": "openai/gpt-oss-120b",
-      "priority": 8,
+      "priority": 5,
       "enabled": true,
       "execution": {
         "context_length": 131072,
@@ -130,40 +82,8 @@
       }
     },
     {
-      "match": "mistralai/mistral-large-3-675b-instruct-2512",
-      "priority": 9,
-      "enabled": false,
-      "execution": {
-        "context_length": 128000,
-        "max_output_tokens": 16384,
-        "supports_tools": true,
-        "supports_vision": false,
-        "family": "mistralai",
-        "temperature": 0.25,
-        "top_p": 0.95,
-        "max_tokens": 4096,
-        "timeout_seconds": 90
-      }
-    },
-    {
-      "match": "moonshotai/kimi-k2.6",
-      "priority": 10,
-      "enabled": false,
-      "execution": {
-        "context_length": 262144,
-        "max_output_tokens": 262144,
-        "supports_tools": true,
-        "supports_vision": false,
-        "family": "moonshotai",
-        "temperature": 0.25,
-        "top_p": 0.9,
-        "max_tokens": 4096,
-        "timeout_seconds": 60
-      }
-    },
-    {
       "match": "nvidia/llama-3.3-nemotron-super-49b-v1.5",
-      "priority": 11,
+      "priority": 6,
       "enabled": true,
       "execution": {
         "context_length": 131072,
