@@ -13,25 +13,43 @@ internal sealed class ModelSelectionStore
 
     internal ModelExecutionConfig GetExecutionConfigForModel(string model, IReadOnlyDictionary<string, ProviderInfo> modelToProvider)
     {
+        // Collect every (provider, entry) that matches this model, then pick the
+        // one with the longest match substring (= most specific). This handles
+        // cases where two providers both match a given upstream id (e.g. ollama
+        // matches "nemotron" and ollamacloud matches "nemotron-3-super"): the
+        // longer match wins regardless of which JSON file is loaded first.
+        ModelSelectionEntry best = default;
+        string? bestProvider = null;
+        bool hasBest = false;
+
         if (modelToProvider.TryGetValue(model, out ProviderInfo provider))
         {
             ModelSelectionEntry? entry = FindModelSelectionEntry(model, provider.Name);
-            if (entry != null)
+            if (entry.HasValue)
             {
-                return entry.Value.Execution;
+                best = entry.Value;
+                bestProvider = provider.Name;
+                hasBest = true;
             }
         }
 
         foreach (KeyValuePair<string, ModelSelectionEntry[]> kv in _providerModelSelections)
         {
             ModelSelectionEntry? entry = FindModelSelectionEntry(model, kv.Key);
-            if (entry != null)
+            if (!entry.HasValue)
             {
-                return entry.Value.Execution;
+                continue;
+            }
+
+            if (!hasBest || entry.Value.Match.Length > best.Match.Length)
+            {
+                best = entry.Value;
+                bestProvider = kv.Key;
+                hasBest = true;
             }
         }
 
-        return new ModelExecutionConfig();
+        return hasBest ? best.Execution : new ModelExecutionConfig();
     }
 
     internal int GetPreferredModelPriority(string model, string providerName)
@@ -181,7 +199,15 @@ internal sealed class ModelSelectionStore
 
                     if (entries.Count > 0)
                     {
-                        selections[provider] = entries.OrderBy(x => x.Priority).ToArray();
+                        // Order entries by (priority asc, match length desc). A longer match
+                        // substring is more specific than a shorter one, so it wins when two
+                        // entries (e.g. "nemotron" vs "nemotron-3-super") both match the
+                        // same upstream id. Without this, a generic match would shadow a
+                        // specific one whenever the generic file is loaded first.
+                        selections[provider] = entries
+                            .OrderBy(x => x.Priority)
+                            .ThenByDescending(x => x.Match.Length)
+                            .ToArray();
                     }
                 }
                 catch

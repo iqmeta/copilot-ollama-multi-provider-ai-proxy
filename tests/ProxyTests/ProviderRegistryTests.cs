@@ -2,6 +2,10 @@ using System.Text.Json;
 
 namespace ProxyTests;
 
+// Share the "Proxy" collection so ProxyFixture's environment-variable setup
+// runs before any of these tests, and the registry constructor can find a
+// configured PROVIDER_DEEPSEEK_API_KEY.
+[Collection("Proxy")]
 public class ProviderRegistryTests
 {
     [Fact]

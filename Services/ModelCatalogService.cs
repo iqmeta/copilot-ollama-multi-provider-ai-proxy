@@ -32,9 +32,9 @@ internal sealed class ModelCatalogService
     {
         try
         {
-            Dictionary<string, ProviderInfo> newMap = new(StringComparer.OrdinalIgnoreCase);
-            Dictionary<string, string> newUpstream = new(StringComparer.OrdinalIgnoreCase);
-            List<string> allModels = [];
+            // upstream-id (case-insensitive) -> ordered list of claimants by (priority, providerOrder)
+            Dictionary<string, List<Claimant>> claimsByUpstream =
+                new(StringComparer.OrdinalIgnoreCase);
 
             foreach (ProviderInfo prov in _providerRegistry.Providers)
             {
@@ -57,22 +57,59 @@ internal sealed class ModelCatalogService
                         continue;
                     }
 
-                    // Bare name: claimed by the first provider that offers it (back-compat).
-                    if (!newMap.ContainsKey(m))
+                    int prio = _modelSelectionStore.GetPreferredModelPriority(m, prov.Name);
+                    if (!claimsByUpstream.TryGetValue(m, out List<Claimant>? list))
                     {
-                        newMap[m] = prov;
-                        newUpstream[m] = m;
-                        allModels.Add(m);
+                        list = [];
+                        claimsByUpstream[m] = list;
                     }
+                    list.Add(new Claimant(prov, m, prio));
+                }
+            }
 
-                    // Provider-qualified alias: always exposed so every provider's model is addressable.
-                    string qualified = $"{m}@{prov.Name}";
+            if (claimsByUpstream.Count == 0)
+            {
+                return;
+            }
+
+            // Tie-break: configured provider order in ProviderRegistry.Providers.
+            Dictionary<string, int> providerOrder = new(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < _providerRegistry.Providers.Count; i++)
+            {
+                providerOrder[_providerRegistry.Providers[i].Name] = i;
+            }
+
+            Dictionary<string, ProviderInfo> newMap = new(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, string> newUpstream = new(StringComparer.OrdinalIgnoreCase);
+            List<string> allModels = [];
+
+            foreach (KeyValuePair<string, List<Claimant>> kv in claimsByUpstream)
+            {
+                List<Claimant> ordered = kv.Value
+                    .OrderBy(c => c.Priority)
+                    .ThenBy(c => providerOrder.TryGetValue(c.Provider.Name, out int o) ? o : int.MaxValue)
+                    .ToList();
+
+                // Every claimant also gets a qualified alias.
+                foreach (Claimant c in ordered)
+                {
+                    string qualified = $"{c.UpstreamId}@{c.Provider.Name}";
                     if (!newMap.ContainsKey(qualified))
                     {
-                        newMap[qualified] = prov;
-                        newUpstream[qualified] = m;
+                        newMap[qualified] = c.Provider;
+                        newUpstream[qualified] = c.UpstreamId;
                         allModels.Add(qualified);
                     }
+                }
+
+                // Bare name: lowest priority (then configured order) wins.
+                Claimant winner = ordered[0];
+                string bare = winner.UpstreamId;
+                if (!newMap.ContainsKey(bare))
+                {
+                    newMap[bare] = winner.Provider;
+                    newUpstream[bare] = bare;
+                    allModels.Add(bare);
                 }
             }
 
@@ -82,7 +119,20 @@ internal sealed class ModelCatalogService
                     .OrderBy(model => _modelSelectionStore.GetPreferredModelPriority(newUpstream[model], newMap[model].Name))
                     .ThenBy(x => x, StringComparer.OrdinalIgnoreCase)
                     .ToArray();
-                _providerRegistry.UpdateModelMappings(newMap, newUpstream);
+
+                // Build upstream→providers map in priority order (so failover follows
+                // configured priority, not the iteration order of newMap which is "first
+                // qualified alias wins, then the bare name").
+                Dictionary<string, List<ProviderInfo>> upstreamToProviders = new(StringComparer.OrdinalIgnoreCase);
+                foreach (string upstreamId in claimsByUpstream.Keys)
+                {
+                    List<Claimant> ordered = claimsByUpstream[upstreamId]
+                        .OrderBy(c => c.Priority)
+                        .ThenBy(c => providerOrder.TryGetValue(c.Provider.Name, out int o) ? o : int.MaxValue)
+                        .ToList();
+                    upstreamToProviders[upstreamId] = [.. ordered.Select(c => c.Provider).Distinct(ProviderInfoNameComparer.Instance)];
+                }
+                _providerRegistry.UpdateModelMappings(newMap, newUpstream, upstreamToProviders);
                 ModelsLastRefreshUtc = DateTime.UtcNow;
             }
         }
@@ -90,6 +140,17 @@ internal sealed class ModelCatalogService
         {
             // keep current fallback list when discovery fails
         }
+    }
+
+    private readonly record struct Claimant(ProviderInfo Provider, string UpstreamId, int Priority);
+
+    private sealed class ProviderInfoNameComparer : IEqualityComparer<ProviderInfo>
+    {
+        public static readonly ProviderInfoNameComparer Instance = new();
+        public bool Equals(ProviderInfo x, ProviderInfo y) =>
+            string.Equals(x.Name, y.Name, StringComparison.OrdinalIgnoreCase);
+        public int GetHashCode(ProviderInfo obj) =>
+            obj.Name is null ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Name);
     }
 
     internal (int ContextLength, int MaxOutputTokens, bool SupportsTools, bool SupportsVision, string[] Capabilities, string Family) GetModelProfile(string model)

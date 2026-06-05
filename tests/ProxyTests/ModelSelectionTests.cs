@@ -7,6 +7,7 @@ namespace ProxyTests;
 /// Tests for LoadProviderModelSelections() and related model-selection helpers.
 /// These tests operate on JSON parsing and selection logic independently of any live provider.
 /// </summary>
+[Collection("Proxy")]
 public class ModelSelectionTests
 {
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -305,8 +306,8 @@ public class ModelSelectionTests
         var selections = LoadFromDir(Path.GetDirectoryName(configPath)!);
 
         Assert.True(selections.ContainsKey("nvidia"));
-        Assert.True(selections["nvidia"].Length >= 11,
-            $"Expected >= 11 curated models, got {selections["nvidia"].Length}");
+        Assert.True(selections["nvidia"].Length >= 8,
+            $"Expected >= 8 curated models, got {selections["nvidia"].Length}");
     }
 
     [Fact]

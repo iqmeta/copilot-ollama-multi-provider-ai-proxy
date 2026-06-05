@@ -8,6 +8,7 @@ namespace ProxyTests;
 /// for every enabled model/provider declared in config/model-selection/*.json.
 /// These tests are fully offline – no live API calls are made.
 /// </summary>
+[Collection("Proxy")]
 public class ParameterValidationTests
 {
     /// <summary>
@@ -225,7 +226,7 @@ public class ParameterValidationTests
     // ──────────────────────────────────────────────
 
     [Theory]
-    [InlineData("gemma3:4b")]
+    [InlineData("gemma4:31b")]
     [InlineData("nemotron-3-super")]
     public void OllamaCloud_Models_MaxTokensInjected(string model)
     {
@@ -239,7 +240,7 @@ public class ParameterValidationTests
     }
 
     [Theory]
-    [InlineData("gemma3:4b")]
+    [InlineData("gemma4:31b")]
     [InlineData("nemotron-3-super")]
     public void OllamaCloud_Models_NoReasoningEffortLeakage(string model)
     {
@@ -571,13 +572,13 @@ public class ParameterValidationTests
     // ──────────────────────────────────────────────
 
     [Theory]
-    [InlineData("deepseek", 2)]
+    [InlineData("deepseek", 3)]
     [InlineData("openai", 4)]
     [InlineData("nvidia", 8)]
     [InlineData("groq", 4)]
     [InlineData("openrouter", 2)]
     [InlineData("moonshot", 5)]
-    [InlineData("ollamacloud", 2)]
+    [InlineData("ollamacloud", 10)]
     public void EnabledModelCount_IsCorrect(string providerName, int expectedEnabled)
     {
         ModelSelectionStore store = new();

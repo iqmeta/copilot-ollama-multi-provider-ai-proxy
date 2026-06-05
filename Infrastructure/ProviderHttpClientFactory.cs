@@ -3,7 +3,19 @@ using System.Net.Http.Headers;
 
 internal sealed class ProviderHttpClientFactory
 {
-    private readonly SocketsHttpHandler _sharedHandler = new()
+    private readonly HttpMessageHandler _sharedHandler;
+
+    public ProviderHttpClientFactory() : this(NewDefaultHandler()) { }
+
+    // Test seam: pass a custom HttpMessageHandler (e.g., a DelegatingHandler) so
+    // unit tests can drive provider HTTP responses without touching the network.
+    // Production code uses the parameterless ctor.
+    internal ProviderHttpClientFactory(HttpMessageHandler sharedHandler)
+    {
+        _sharedHandler = sharedHandler;
+    }
+
+    private static SocketsHttpHandler NewDefaultHandler() => new()
     {
         EnableMultipleHttp2Connections = true,
         MaxConnectionsPerServer = 256,
@@ -16,9 +28,12 @@ internal sealed class ProviderHttpClientFactory
         PreAuthenticate = false
     };
 
-    internal HttpClient CreateProviderClient(string providerName, string baseUrl, string apiKey)
+    internal HttpClient CreateProviderClient(string providerName, string baseUrl, string apiKey) =>
+        CreateProviderClient(providerName, baseUrl, apiKey, _sharedHandler);
+
+    internal HttpClient CreateProviderClient(string providerName, string baseUrl, string apiKey, HttpMessageHandler handler)
     {
-        HttpClient client = new(_sharedHandler)
+        HttpClient client = new(handler, disposeHandler: false)
         {
             Timeout = TimeSpan.FromMinutes(5),
             BaseAddress = new Uri(baseUrl)

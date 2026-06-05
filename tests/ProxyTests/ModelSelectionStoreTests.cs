@@ -1,5 +1,10 @@
 namespace ProxyTests;
 
+// Share the "Proxy" collection with EndpointTests and ModelCatalogServiceTests
+// so ProxyFixture's environment-variable setup runs once before any of these
+// tests, and the registry constructor in each test can find a configured
+// PROVIDER_DEEPSEEK_API_KEY.
+[Collection("Proxy")]
 public class ModelSelectionStoreTests
 {
     [Fact]

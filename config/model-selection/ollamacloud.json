@@ -134,7 +134,7 @@
       "priority": 9,
       "enabled": true,
       "execution": {
-        "context_length": 1000000,
+        "context_length": 1048576,
         "max_output_tokens": 16384,
         "supports_tools": true,
         "supports_vision": false,

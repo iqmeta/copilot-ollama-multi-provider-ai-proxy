@@ -25,24 +25,34 @@ internal sealed class ProviderRegistry
 
     internal IReadOnlyDictionary<string, string> ModelToUpstream => _modelToUpstream;
 
-    internal void UpdateModelMappings(Dictionary<string, ProviderInfo> modelToProvider, Dictionary<string, string> modelToUpstream)
+    internal void UpdateModelMappings(
+        Dictionary<string, ProviderInfo> modelToProvider,
+        Dictionary<string, string> modelToUpstream,
+        Dictionary<string, List<ProviderInfo>>? upstreamToProviders = null)
     {
         _modelToProvider = modelToProvider;
         _modelToUpstream = modelToUpstream;
 
-        Dictionary<string, List<ProviderInfo>> upstreamToProviders = new(StringComparer.OrdinalIgnoreCase);
+        if (upstreamToProviders is not null)
+        {
+            // Caller (ModelCatalogService) already ordered providers by configured priority.
+            _upstreamToProviders = upstreamToProviders;
+            return;
+        }
+
+        // Fallback: build from modelToProvider, preserving discovery order as a tie-break.
+        Dictionary<string, List<ProviderInfo>> upstream = new(StringComparer.OrdinalIgnoreCase);
         foreach ((string modelId, ProviderInfo prov) in modelToProvider)
         {
-            string upstream = modelToUpstream.TryGetValue(modelId, out string? up) ? up : modelId;
-            if (!upstreamToProviders.TryGetValue(upstream, out List<ProviderInfo>? list))
+            string up = modelToUpstream.TryGetValue(modelId, out string? u) ? u : modelId;
+            if (!upstream.TryGetValue(up, out List<ProviderInfo>? list))
             {
                 list = [];
-                upstreamToProviders[upstream] = list;
+                upstream[up] = list;
             }
 
             if (!list.Any(p => p.Name.Equals(prov.Name, StringComparison.OrdinalIgnoreCase)))
             {
-                // Preserve provider discovery order so failover follows configured priority.
                 int order = _providers.FindIndex(p => p.Name.Equals(prov.Name, StringComparison.OrdinalIgnoreCase));
                 int insertAt = list.FindIndex(p => _providers.FindIndex(q => q.Name.Equals(p.Name, StringComparison.OrdinalIgnoreCase)) > order);
                 if (insertAt < 0)
@@ -56,7 +66,7 @@ internal sealed class ProviderRegistry
             }
         }
 
-        _upstreamToProviders = upstreamToProviders;
+        _upstreamToProviders = upstream;
     }
 
     internal ProviderInfo ResolveProvider(string? requestedModel) =>
