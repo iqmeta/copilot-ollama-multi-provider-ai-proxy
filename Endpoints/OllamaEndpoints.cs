@@ -142,6 +142,8 @@ internal static class OllamaEndpoints
                     using HttpResponseMessage ollamaResp = await ollamaProvider.Client.SendAsync(
                         new HttpRequestMessage(HttpMethod.Post, "/api/chat") { Content = ollamaContent }, ollamaCt);
                     string ollamaRespBody = await ollamaResp.Content.ReadAsStringAsync(ct);
+                    // Fallback: copy `thinking` into `content` for reasoning models that leave content empty.
+                    ollamaRespBody = EnsureOllamaContentFromThinking(ollamaRespBody);
                     ctx.Response.StatusCode = (int)ollamaResp.StatusCode;
                     ctx.Response.ContentType = "application/json";
                     await ctx.Response.WriteAsync(ollamaRespBody, ct);
@@ -422,6 +424,79 @@ internal static class OllamaEndpoints
         catch
         {
             return rawBody;
+        }
+    }
+
+    /// <summary>
+    /// Reasoning models on Ollama Cloud may return `thinking` with empty `content`.
+    /// This copies the `thinking` field into `content` when content is empty or missing.
+    /// </summary>
+    private static string EnsureOllamaContentFromThinking(string responseBody)
+    {
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(responseBody);
+            JsonElement root = doc.RootElement;
+            if (!root.TryGetProperty("message", out JsonElement msg) || msg.ValueKind != JsonValueKind.Object)
+                return responseBody;
+
+            JsonElement contentElem = msg.TryGetProperty("content", out JsonElement ce) ? ce : default;
+            bool contentMissing = contentElem.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined;
+            bool contentEmpty = !contentMissing && contentElem.ValueKind == JsonValueKind.String && string.IsNullOrWhiteSpace(contentElem.GetString());
+            if (!contentMissing && !contentEmpty)
+                return responseBody;
+
+            if (!msg.TryGetProperty("thinking", out JsonElement thinkingElem) || thinkingElem.ValueKind != JsonValueKind.String)
+                return responseBody;
+
+            string thinking = thinkingElem.GetString() ?? string.Empty;
+            if (string.IsNullOrEmpty(thinking))
+                return responseBody;
+
+            using MemoryStream ms = new();
+            using Utf8JsonWriter writer = new(ms);
+            writer.WriteStartObject();
+            bool wroteContent = false;
+
+            foreach (JsonProperty prop in root.EnumerateObject())
+            {
+                if (prop.NameEquals("message") && prop.Value.ValueKind == JsonValueKind.Object)
+                {
+                    writer.WritePropertyName("message");
+                    writer.WriteStartObject();
+                    foreach (JsonProperty mp in prop.Value.EnumerateObject())
+                    {
+                        if (mp.NameEquals("content"))
+                        {
+                            writer.WriteString("content", thinking);
+                            wroteContent = true;
+                        }
+                        else
+                        {
+                            mp.WriteTo(writer);
+                        }
+                    }
+
+                    if (!wroteContent)
+                    {
+                        writer.WriteString("content", thinking);
+                    }
+
+                    writer.WriteEndObject();
+                }
+                else
+                {
+                    prop.WriteTo(writer);
+                }
+            }
+
+            writer.WriteEndObject();
+            writer.Flush();
+            return Encoding.UTF8.GetString(ms.ToArray());
+        }
+        catch
+        {
+            return responseBody;
         }
     }
 }

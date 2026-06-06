@@ -266,6 +266,12 @@ internal static class OpenAiEndpoints
 
         string openAiResponseBody = ConvertOllamaChatToOpenAiCompletion(respBody, effectiveModel);
 
+        using JsonDocument completionDoc = JsonDocument.Parse(openAiResponseBody);
+        JsonElement msg = completionDoc.RootElement.GetProperty("choices")[0].GetProperty("message");
+        string contentText = msg.TryGetProperty("content", out JsonElement ce) && ce.ValueKind == JsonValueKind.String
+            ? ce.GetString() ?? string.Empty
+            : string.Empty;
+
         if (!isStream)
         {
             ctx.Response.StatusCode = 200;
@@ -274,12 +280,7 @@ internal static class OpenAiEndpoints
             return;
         }
 
-        using JsonDocument completionDoc = JsonDocument.Parse(openAiResponseBody);
-        JsonElement msg = completionDoc.RootElement.GetProperty("choices")[0].GetProperty("message");
-        string contentText = msg.TryGetProperty("content", out JsonElement ce) && ce.ValueKind == JsonValueKind.String
-            ? ce.GetString() ?? string.Empty
-            : string.Empty;
-
+        // Streaming: Ollama Cloud non-streaming -> SSE chunks
         object firstChunk = new
         {
             id = $"chatcmpl-{Guid.NewGuid():N}",
@@ -388,6 +389,12 @@ internal static class OpenAiEndpoints
         string content = message.ValueKind == JsonValueKind.Object && message.TryGetProperty("content", out JsonElement contentElement)
             ? contentElement.GetString() ?? string.Empty
             : string.Empty;
+
+        // Fallback to `thinking` when content is empty (reasoning models put text in `thinking`).
+        if (string.IsNullOrWhiteSpace(content) && message.ValueKind == JsonValueKind.Object && message.TryGetProperty("thinking", out JsonElement thinkingElement))
+        {
+            content = thinkingElement.GetString() ?? string.Empty;
+        }
 
         object completion = new
         {
