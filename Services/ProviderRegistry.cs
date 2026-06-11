@@ -97,6 +97,17 @@ internal sealed class ProviderRegistry
             string cleanModel = StripTagSuffix(requestedModel);
             if (_modelToProvider.ContainsKey(cleanModel))
                 return cleanModel;
+
+            // Accept the OpenAI-style "provider/model" form (e.g. "groq/llama-3.3-70b-versatile")
+            // which /v1/models announces. Reduce to the bare upstream id the routing layer
+            // actually stores.
+            int slash = cleanModel.IndexOf('/');
+            if (slash > 0 && slash < cleanModel.Length - 1)
+            {
+                string bare = cleanModel[(slash + 1)..];
+                if (_modelToProvider.ContainsKey(bare))
+                    return bare;
+            }
         }
 
         return DefaultModel;
