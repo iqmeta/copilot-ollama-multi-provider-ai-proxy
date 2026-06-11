@@ -181,14 +181,21 @@ internal sealed class ProviderRegistry
 
     private void DiscoverProviders(ProviderHttpClientFactory httpClientFactory)
     {
-        foreach (string providerName in new[] { "deepseek", "openai", "nvidia", "openrouter", "groq", "ollama", "moonshot", "cerebras" })
+        foreach (string providerName in ProviderCapabilitiesRegistry.KnownProviders)
         {
-            string prefix = providerName.ToUpperInvariant();
-            string? apiKey = providerName == "ollama"
-                ? Environment.GetEnvironmentVariable("PROVIDER_OLLAMACLOUD_API_KEY")
-                    ?? Environment.GetEnvironmentVariable($"PROVIDER_{prefix}_API_KEY")
-                : Environment.GetEnvironmentVariable($"PROVIDER_{prefix}_API_KEY");
+            ProviderCapabilities caps = ProviderCapabilitiesRegistry.Get(providerName);
+            string prefix = caps.EnvPrefix;
 
+            string? apiKey = Environment.GetEnvironmentVariable($"PROVIDER_{prefix}_API_KEY");
+
+            // Backward compatibility: Ollama Cloud also accepts PROVIDER_OLLAMA_API_KEY.
+            if (string.IsNullOrWhiteSpace(apiKey) && providerName == "ollama")
+            {
+                apiKey = Environment.GetEnvironmentVariable("PROVIDER_OLLAMA_API_KEY");
+            }
+
+            // Skip providers that require an API key when none is configured.
+            // Ollama can still be discovered later as a local instance (no API key needed).
             if (string.IsNullOrWhiteSpace(apiKey))
             {
                 continue;
@@ -196,30 +203,36 @@ internal sealed class ProviderRegistry
 
             string? configuredBaseUrl = Environment.GetEnvironmentVariable($"PROVIDER_{prefix}_BASE_URL");
             string baseUrl = string.IsNullOrWhiteSpace(configuredBaseUrl)
-                ? providerName switch
-                {
-                    "deepseek" => "https://api.deepseek.com",
-                    "openai" => "https://api.openai.com",
-                    "nvidia" => "https://integrate.api.nvidia.com",
-                    "openrouter" => "https://openrouter.ai/api/",
-                    "groq" => "https://api.groq.com/openai",
-                    "ollama" => "https://ollama.com",
-                    "moonshot" => "https://api.moonshot.ai",
-                    "cerebras" => "https://api.cerebras.ai",
-                    _ => ""
-                }
+                ? caps.DefaultBaseUrl
                 : configuredBaseUrl;
 
             HttpClient provClient = httpClientFactory.CreateProviderClient(providerName, baseUrl, apiKey);
-            _providers.Add(new ProviderInfo(providerName, apiKey, baseUrl, provClient));
+            _providers.Add(new ProviderInfo(providerName, apiKey, baseUrl, provClient, caps));
         }
 
+        // ── Local Ollama (no API key required) ──────────────────────────
+        // When PROVIDER_OLLAMA_BASE_URL points to localhost / 127.0.0.1 / ::1,
+        // register a second "ollama" entry that works without an API key.
+        string? ollamaBaseUrl = Environment.GetEnvironmentVariable("PROVIDER_OLLAMA_BASE_URL");
+        if (!string.IsNullOrWhiteSpace(ollamaBaseUrl)
+            && (ollamaBaseUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase)
+                || ollamaBaseUrl.Contains("127.0.0.1")
+                || ollamaBaseUrl.Contains("::1"))
+            && !_providers.Any(p => p.BaseUrl.Equals(ollamaBaseUrl, StringComparison.OrdinalIgnoreCase)))
+        {
+            ProviderCapabilities ollamaCaps = ProviderCapabilitiesRegistry.Get("ollama");
+            HttpClient localClient = httpClientFactory.CreateProviderClient("ollama", ollamaBaseUrl, apiKey: "");
+            _providers.Add(new ProviderInfo("ollama", "", ollamaBaseUrl, localClient, ollamaCaps));
+        }
+
+        // ── Legacy DEEPSEEK_API_KEY fallback ────────────────────────────
         string? legacyKey = Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY");
         if (!string.IsNullOrWhiteSpace(legacyKey) && !_providers.Any(p => p.Name == "deepseek"))
         {
-            string legacyUrl = Environment.GetEnvironmentVariable("DEEPSEEK_BASE_URL") ?? "https://api.deepseek.com";
+            ProviderCapabilities deepseekCaps = ProviderCapabilitiesRegistry.Get("deepseek");
+            string legacyUrl = Environment.GetEnvironmentVariable("DEEPSEEK_BASE_URL") ?? deepseekCaps.DefaultBaseUrl;
             _providers.Add(new ProviderInfo("deepseek", legacyKey, legacyUrl,
-                httpClientFactory.CreateProviderClient("deepseek", legacyUrl, legacyKey)));
+                httpClientFactory.CreateProviderClient("deepseek", legacyUrl, legacyKey), deepseekCaps));
         }
     }
 }

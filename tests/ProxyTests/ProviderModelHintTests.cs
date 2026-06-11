@@ -218,5 +218,7 @@ public class ProviderModelHintTests
 
     // ── helpers ───────────────────────────────────────────────────────────
 
-    private static ProviderInfo MakeProvider(string name) => new(name, "key", $"http://{name}.test/", new HttpClient());
+    private static ProviderInfo MakeProvider(string name) =>
+        new(name, "key", $"http://{name}.test/", new HttpClient(),
+            ProviderCapabilitiesRegistry.TryGet(name, out ProviderCapabilities caps) ? caps : default);
 }

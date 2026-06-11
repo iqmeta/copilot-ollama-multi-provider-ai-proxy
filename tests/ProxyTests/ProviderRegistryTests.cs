@@ -82,7 +82,7 @@ public class ProviderRegistryTests
 
         Dictionary<string, ProviderInfo> newMap = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["custom-model"] = new ProviderInfo("groq", "key", "http://localhost", new System.Net.Http.HttpClient())
+            ["custom-model"] = new ProviderInfo("groq", "key", "http://localhost", new System.Net.Http.HttpClient(), ProviderCapabilitiesRegistry.Get("groq"))
         };
         Dictionary<string, string> newUpstream = new(StringComparer.OrdinalIgnoreCase)
         {

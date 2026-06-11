@@ -25,16 +25,30 @@ public class ParameterValidationTests
         return new(modelCatalog, cache);
     }
 
-    private static JsonElement Transform(RequestTransformer sut, string model, string provider = "")
+    /// <summary>Resolves capabilities from a provider name string, with backwards-compatible
+    /// aliases for test-only provider labels (e.g. "ollamacloud" → "ollama").</summary>
+    private static ProviderCapabilities ResolveCaps(string providerName)
+    {
+        if (string.IsNullOrEmpty(providerName))
+            return default;
+        // Legacy alias: config/model-selection/ollamacloud.json uses "provider": "ollama"
+        if (providerName.Equals("ollamacloud", StringComparison.OrdinalIgnoreCase))
+            return ProviderCapabilitiesRegistry.Get("ollama");
+        return ProviderCapabilitiesRegistry.TryGet(providerName, out ProviderCapabilities caps)
+            ? caps
+            : default;
+    }
+
+    private static JsonElement Transform(RequestTransformer sut, string model, string providerName = "")
     {
         string raw    = """{"model":"x","messages":[{"role":"user","content":"hi"}]}""";
-        string result = sut.ApplyExecutionDefaults(raw, model, provider);
+        string result = sut.ApplyExecutionDefaults(raw, model, ResolveCaps(providerName));
         return JsonDocument.Parse(result).RootElement;
     }
 
-    private static JsonElement TransformWithBody(RequestTransformer sut, string body, string model, string provider = "")
+    private static JsonElement TransformWithBody(RequestTransformer sut, string body, string model, string providerName = "")
     {
-        string result = sut.ApplyExecutionDefaults(body, model, provider);
+        string result = sut.ApplyExecutionDefaults(body, model, ResolveCaps(providerName));
         return JsonDocument.Parse(result).RootElement;
     }
 

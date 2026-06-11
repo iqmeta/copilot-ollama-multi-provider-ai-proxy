@@ -9,5 +9,6 @@ public record struct ModelExecutionConfig(
     int? MaxTokensPreferred = null,
     string? ReasoningEffort = null,
     int? TimeoutSeconds = null,
-    bool OverrideClientParams = false
+    bool OverrideClientParams = false,
+    bool? SupportsReasoning = null
 );

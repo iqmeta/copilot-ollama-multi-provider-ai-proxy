@@ -73,30 +73,28 @@ public class ModelCatalogServiceTests : IDisposable
         HashSet<string> requested = new(perProviderModels.Keys, StringComparer.OrdinalIgnoreCase);
         foreach (string name in requested)
         {
-            string prefix = name.ToUpperInvariant();
+            // Use capabilities to determine the correct env-var prefix (e.g. OLLAMACLOUD for ollama).
+            string prefix = ProviderCapabilitiesRegistry.TryGet(name, out ProviderCapabilities caps)
+                ? caps.EnvPrefix
+                : name.ToUpperInvariant();
             string baseUrl = $"http://{name}.test/";
+            Environment.SetEnvironmentVariable($"PROVIDER_{prefix}_API_KEY", AnyKey);
+            // Backward compatibility: Ollama also reads PROVIDER_OLLAMA_API_KEY as fallback
             if (ollama.Contains(name))
             {
-                Environment.SetEnvironmentVariable("PROVIDER_OLLAMACLOUD_API_KEY", AnyKey);
                 Environment.SetEnvironmentVariable("PROVIDER_OLLAMA_API_KEY", null);
-            }
-            else
-            {
-                Environment.SetEnvironmentVariable($"PROVIDER_{prefix}_API_KEY", AnyKey);
             }
             Environment.SetEnvironmentVariable($"PROVIDER_{prefix}_BASE_URL", baseUrl);
         }
 
         // Clear anything the host environment might have set that isn't in our list.
-        // The env-var suffix for "ollama" is "OLLAMACLOUD" (not "OLLAMA"): ProviderRegistry's
-        // `providerName == "ollama"` branch reads PROVIDER_OLLAMACLOUD_API_KEY first. So when
-        // "ollama" is in `requested`, we must NOT clear PROVIDER_OLLAMACLOUD_API_KEY.
         bool ollamaRequested = requested.Contains("ollama");
-        foreach (string prov in new[] { "DEEPSEEK", "OPENAI", "NVIDIA", "OPENROUTER", "GROQ", "OLLAMA", "MOONSHOT" })
+        foreach (string provName in ProviderCapabilitiesRegistry.KnownProviders)
         {
-            if (!requested.Contains(prov))
+            ProviderCapabilities caps = ProviderCapabilitiesRegistry.Get(provName);
+            if (!requested.Contains(provName))
             {
-                Environment.SetEnvironmentVariable($"PROVIDER_{prov}_API_KEY", null);
+                Environment.SetEnvironmentVariable($"PROVIDER_{caps.EnvPrefix}_API_KEY", null);
             }
         }
         if (!ollamaRequested)

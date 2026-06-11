@@ -145,9 +145,9 @@ internal static class OpenAiEndpoints
                         // The raw body may carry a BYOM tag suffix (e.g. ":latest") that
                         // upstream providers don't understand.
                         candidateBody = requestTransformer.ReplaceModelInRequestBody(candidateBody, candidateUpstream);
-                        candidateBody = requestTransformer.ApplyExecutionDefaults(candidateBody, effectiveModel, candidateProvider.Name);
+                        candidateBody = requestTransformer.ApplyExecutionDefaults(candidateBody, effectiveModel, candidateProvider.Capabilities);
 
-                        if (candidateProvider.Name.Equals("ollama", StringComparison.OrdinalIgnoreCase))
+                        if (candidateProvider.Capabilities.ApiFormat == ApiFormat.Ollama)
                         {
                             bool handled = await TryHandleOllamaCloudChatCompletion(
                                 ctx, candidateProvider, candidateBody, effectiveModel, candidateUpstream, requestCt, ct);
@@ -158,7 +158,7 @@ internal static class OpenAiEndpoints
 
                         using StringContent content = new(candidateBody, Encoding.UTF8, "application/json");
                         HttpResponseMessage response = await candidateProvider.Client.SendAsync(
-                            new HttpRequestMessage(HttpMethod.Post, "v1/chat/completions") { Content = content },
+                            new HttpRequestMessage(HttpMethod.Post, candidateProvider.Capabilities.ChatPath) { Content = content },
                             requestCt);
 
                         string respBody = await response.Content.ReadAsStringAsync(ct);
@@ -199,9 +199,9 @@ internal static class OpenAiEndpoints
             // The raw body may carry a BYOM tag suffix (e.g. ":latest") that
             // upstream providers don't understand.
             bodyText = requestTransformer.ReplaceModelInRequestBody(bodyText, upstreamModel);
-            bodyText = requestTransformer.ApplyExecutionDefaults(bodyText, effectiveModel, provider.Name);
+            bodyText = requestTransformer.ApplyExecutionDefaults(bodyText, effectiveModel, provider.Capabilities);
 
-            if (provider.Name.Equals("ollama", StringComparison.OrdinalIgnoreCase))
+            if (provider.Capabilities.ApiFormat == ApiFormat.Ollama)
             {
                 await HandleOllamaCloudChatCompletion(ctx, provider, bodyText, effectiveModel, upstreamModel, isStream, requestCt, ct);
                 return;
@@ -213,7 +213,7 @@ internal static class OpenAiEndpoints
             ctx.Response.Headers["X-Accel-Buffering"] = "no";
 
             using StringContent reqContent = new(bodyText, Encoding.UTF8, "application/json");
-            using HttpRequestMessage upstreamReq = new(HttpMethod.Post, "v1/chat/completions")
+            using HttpRequestMessage upstreamReq = new(HttpMethod.Post, provider.Capabilities.ChatPath)
             {
                 Content = reqContent
             };
@@ -278,7 +278,7 @@ internal static class OpenAiEndpoints
 
         using StringContent content = new(ollamaRequestBody, Encoding.UTF8, "application/json");
         using HttpResponseMessage response = await provider.Client.SendAsync(
-            new HttpRequestMessage(HttpMethod.Post, "api/chat") { Content = content },
+            new HttpRequestMessage(HttpMethod.Post, provider.Capabilities.ChatPath) { Content = content },
             requestCt);
 
         string respBody = await response.Content.ReadAsStringAsync(clientCt);
@@ -306,7 +306,7 @@ internal static class OpenAiEndpoints
 
         using StringContent content = new(ollamaRequestBody, Encoding.UTF8, "application/json");
         using HttpResponseMessage response = await provider.Client.SendAsync(
-            new HttpRequestMessage(HttpMethod.Post, "api/chat") { Content = content },
+            new HttpRequestMessage(HttpMethod.Post, provider.Capabilities.ChatPath) { Content = content },
             requestCt);
 
         string respBody = await response.Content.ReadAsStringAsync(clientCt);

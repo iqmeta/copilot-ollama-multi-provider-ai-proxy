@@ -132,7 +132,7 @@ internal static class OllamaEndpoints
             CancellationToken ollamaCt = ollamaTimeoutCts?.Token ?? ct;
 
             // ── Ollama Cloud / Native Ollama passthrough ──────────────────
-            if (ollamaProvider.Name.Equals("ollama", StringComparison.OrdinalIgnoreCase))
+            if (ollamaProvider.Capabilities.ApiFormat == ApiFormat.Ollama)
             {
                 string upstreamBody = ReplaceModelInOllamaRequestBody(body, ollamaUpstreamModel);
 
@@ -140,7 +140,7 @@ internal static class OllamaEndpoints
                 {
                     using StringContent ollamaContent = new(upstreamBody, Encoding.UTF8, "application/json");
                     using HttpResponseMessage ollamaResp = await ollamaProvider.Client.SendAsync(
-                        new HttpRequestMessage(HttpMethod.Post, "api/chat") { Content = ollamaContent }, ollamaCt);
+                        new HttpRequestMessage(HttpMethod.Post, ollamaProvider.Capabilities.ChatPath) { Content = ollamaContent }, ollamaCt);
                     string ollamaRespBody = await ollamaResp.Content.ReadAsStringAsync(ct);
                     // Fallback: copy `thinking` into `content` for reasoning models that leave content empty.
                     ollamaRespBody = EnsureOllamaContentFromThinking(ollamaRespBody);
@@ -187,14 +187,14 @@ internal static class OllamaEndpoints
             }
 
             // Apply execution defaults with provider-aware parameter filtering
-            openAiBody = requestTransformer.ApplyExecutionDefaults(openAiBody, ollamaEffectiveModel, ollamaProvider.Name);
+            openAiBody = requestTransformer.ApplyExecutionDefaults(openAiBody, ollamaEffectiveModel, ollamaProvider.Capabilities);
 
             using StringContent reqContent = new(openAiBody, Encoding.UTF8, "application/json");
 
             if (!isStream)
             {
                 using HttpResponseMessage resp = await ollamaProvider.Client.SendAsync(
-                    new HttpRequestMessage(HttpMethod.Post, "v1/chat/completions") { Content = reqContent }, ollamaCt);
+                    new HttpRequestMessage(HttpMethod.Post, ollamaProvider.Capabilities.ChatPath) { Content = reqContent }, ollamaCt);
                 string respBody = await resp.Content.ReadAsStringAsync(ct);
 
                 if (!resp.IsSuccessStatusCode)
