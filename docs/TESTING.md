@@ -12,6 +12,8 @@ Comprehensive testing documentation covering unit tests, integration tests, and 
   - [Unit Test Files](#unit-test-files)
   - [Model Selection Tests](#model-selection-tests)
   - [Request Transformer Tests](#request-transformer-tests)
+  - [Override Client Params Tests](#override-client-params-tests)
+  - [Provider Model Hint Tests](#provider-model-hint-tests)
 - [Test Architecture](#test-architecture)
 - [Adding New Tests](#adding-new-tests)
 - [Performance Testing](#performance-testing)
@@ -21,16 +23,17 @@ Comprehensive testing documentation covering unit tests, integration tests, and 
 
 ## Test Overview
 
-The proxy includes a comprehensive test suite covering:
+The proxy includes a comprehensive test suite covering every component of the routing, transformation, and provider-resolution pipeline. All tests are in-process: no real provider API calls are made.
 
 ### Test Statistics
 
-- **Total Tests:** 182
-- **Status:** ✅ All passing (182/182)
+- **Total Tests:** 329
+- **Status:** ✅ All passing (329/329)
+- **Framework:** xUnit 2.9.3 + `Microsoft.AspNetCore.Mvc.Testing`
 - **Coverage Areas:**
-  - ✅ Endpoint routing (OpenAI & Ollama formats)
-  - ✅ Parameter validation and filtering
-  - ✅ Model selection and defaults
+  - ✅ Endpoint routing (OpenAI `/v1/*` & Ollama `/api/*` formats)
+  - ✅ Parameter validation and per-provider filtering
+  - ✅ Model selection and JSON config parsing
   - ✅ Request transformation logic
   - ✅ Streaming and non-streaming responses
   - ✅ Error handling and fallback logic
@@ -42,12 +45,14 @@ The proxy includes a comprehensive test suite covering:
   - ✅ Provider HTTP client factory
   - ✅ Model selection store
   - ✅ Reasoning cache service
+  - ✅ **`override_client_params` force-mode semantics** (new)
+  - ✅ **3-level `provider/model` hint resolution** (new)
 
 ### Test Technologies
 
 - **Framework:** xUnit
 - **Test Mode:** In-process with stub provider server
-- **Isolation:** Each test uses a fresh proxy instance
+- **Isolation:** Tests that mutate process env vars share the `Proxy` collection fixture
 - **Stub Provider:** Mock OpenAI-compatible endpoint for isolation (no external API calls)
 
 ---
@@ -67,21 +72,26 @@ The proxy includes a comprehensive test suite covering:
 # Run all tests
 dotnet test
 
-# Run with verbose output
+# Run with quiet output
 dotnet test --verbosity quiet
 
 # Run specific test suite
 dotnet test --filter "FullyQualifiedName~ParameterValidationTests"
+dotnet test --filter "FullyQualifiedName~OverrideClientParamsTests"
+dotnet test --filter "FullyQualifiedName~ProviderModelHintTests"
 dotnet test --filter "FullyQualifiedName~ReasoningCacheServiceTests"
 
 # Run with coverage report
 dotnet test /p:CollectCoverage=true
+
+# Run a single test by method name
+dotnet test --filter TestMethodName=MySpecificTest
 ```
 
 ### Via PowerShell
 
 ```powershell
-cd C:\Users\TT\source\repos\vs2026-copilot-deepseek-v4
+cd D:\repos\vs2026-copilot-deepseek-v4
 
 # Run all tests with real-time output
 dotnet test --logger "console;verbosity=detailed"
@@ -98,52 +108,33 @@ dotnet test > logs/test-results.txt 2>&1
 
 **File:** `tests/ProxyTests/EndpointTests.cs`
 
-Tests the proxy's HTTP endpoints against stub provider responses. Uses `WebApplicationFactory` with an in-process provider stub to avoid real API calls.
+Tests the proxy's HTTP endpoints against stub provider responses. Uses `WebApplicationFactory` with an in-process provider stub to avoid real API calls. The fixture spins up Kestrel on `http://127.0.0.1:0` (random port), points `PROVIDER_DEEPSEEK_BASE_URL` at it, and exposes an `HttpClient` to the proxy under test.
 
 #### Test Classes
 
 **1. OpenAI-Compatible Endpoints**
-- `GET /v1/models` — List available models
+- `GET /v1/models` — List available models (OpenAI format)
 - `POST /v1/chat/completions` — Chat completion (non-streaming)
 - `POST /v1/chat/completions?stream=true` — Chat completion (streaming)
 
 **2. Ollama-Compatible Endpoints**
 - `GET /api/version` — Proxy version
 - `GET /api/tags` — List models in Ollama format
-- `GET /api/show?model=...` — Model details
-- `POST /api/show` — Model details via POST
-- `POST /api/chat` — Chat completion (Ollama format)
+- `GET /api/show?model=...` — Model details (GET)
+- `POST /api/show` — Model details (POST)
+- `POST /api/chat` — Chat completion (Ollama NDJSON streaming)
 
-**3. Health Endpoint**
+**3. Health & Diagnostics**
 - `GET /health` — Proxy health status
-
-#### Test Patterns
-
-Each endpoint test:
-1. Sends a request to the proxy
-2. Internally routes to the stub provider
-3. Validates response format and content
-4. Checks HTTP status codes
-
-**Example Test:**
-```csharp
-[Fact]
-public async Task GetModels_ReturnsOpenAiFormat()
-{
-    var response = await Client.GetAsync("/v1/models");
-
-    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    var json = await response.Content.ReadAsAsync<JsonElement>();
-    Assert.Equal("list", json.GetProperty("object").GetString());
-}
-```
+- `GET /api/version` — Build version
 
 #### Key Validations
 
-- ✅ Response format matches OpenAI/Ollama spec
+- ✅ Response format matches OpenAI / Ollama spec
 - ✅ Status codes are correct (200, 400, 502, 503)
 - ✅ JSON structure is valid
-- ✅ Streaming responses contain proper delimiters
+- ✅ Streaming responses use proper delimiters
+- ✅ `/v1/models` only returns ids the routing layer can actually accept (bare or `upstream@provider` — never raw `provider/model`)
 
 ---
 
@@ -156,35 +147,46 @@ Validates that `RequestTransformer.ApplyExecutionDefaults()` correctly injects d
 #### Test Coverage
 
 **DeepSeek Models:**
-- ✅ `deepseek-v4-pro` — reasoning_effort injected, top_p omitted
+- ✅ `deepseek-v4-pro` — reasoning_effort injected, top_p omitted (native reasoner)
 - ✅ `deepseek-v4-flash` — reasoning_effort injected, top_p omitted
-- ✅ `deepseek-coder-6.7b-instruct` — disabled in config, not tested
+- ✅ `deepseek-coder-6.7b-instruct` — disabled in config, not tested as a "preferred" model
 
-**NVIDIA NIM Models:**
-- ✅ Reasoning parameters stripped (not supported)
-- ✅ temperature, top_p preserved
-- ✅ Default max_tokens applied
+**NVIDIA NIM Models (5 curated for coding + Copilot):**
+- ✅ qwen/qwen3-coder-480b-a35b-instruct
+- ✅ moonshotai/kimi-k2.6
+- ✅ nvidia/nemotron-3-super-120b-a12b
+- ✅ openai/gpt-oss-120b
+- ✅ qwen/qwen3.5-397b-a17b
 
-**OpenAI Models:**
-- ✅ All temperature/top_p parameters preserved
-- ✅ top_k filtered (not OpenAI-compatible)
-- ✅ reasoning_effort preserved for o-series only
+**OpenAI Models (5):**
+- ✅ gpt-5, gpt-5-mini, gpt-4.1, gpt-4o, gpt-oss-120b
 
-**Groq Models:**
-- ✅ reasoning_effort, tools stripped (not supported)
-- ✅ temperature, top_p preserved
+**Groq Models (5):**
+- ✅ llama-3.3-70b-versatile, qwen/qwen3-32b, meta-llama/llama-4-scout-17b-16e-instruct, openai/gpt-oss-120b, openai/gpt-oss-20b
 
-**OpenRouter Models:**
-- ✅ Full parameter pass-through (compatible with any backend)
+**Moonshot/Kimi Models (5):**
+- ✅ kimi-k2.6 (force-mode: temperature=1.0, override_client_params=true)
+- ✅ kimi-k2.5 (force-mode: temperature=1.0, override_client_params=true)
+- ✅ moonshot-v1-128k, moonshot-v1-auto, moonshot-v1-32k
+
+**OpenRouter Models (5):**
+- ✅ qwen/qwen3-coder, nvidia/nemotron-3-super-120b-a12b, nvidia/nemotron-3-ultra-550b-a55b, moonshotai/kimi-k2.6, deepseek/deepseek-v4-pro
+
+**Cerebras Models (2):**
+- ✅ zai-glm-4.7, gpt-oss-120b
+
+**Ollama Cloud Models (5 enabled):**
+- ✅ qwen3-coder:480b, qwen3-coder-next, devstral-2:123b, kimi-k2.6, deepseek-v4-pro
 
 #### Expected Behavior
 
-| Model | reasoning_effort | temperature | top_p | top_k | Result |
-|-------|------------------|-------------|-------|-------|--------|
-| deepseek-v4-pro | ✅ injected | ✅ injected | ❌ omitted | ❌ omitted | Valid |
-| gpt-5 | ❌ injected | ✅ injected | ✅ injected | ❌ filtered | Valid |
-| llama-3.3-70b | ❌ filtered | ✅ injected | ✅ injected | ✅ injected | Valid |
-| deepseek-v4-flash | ❌ filtered | ✅ injected | ✅ injected | ✅ injected | Valid |
+| Model | reasoning_effort | temperature | top_p | top_k | override_client_params | Result |
+|-------|------------------|-------------|-------|-------|------------------------|--------|
+| deepseek-v4-pro | ✅ injected | ✅ injected | ❌ omitted (reasoner) | ❌ filtered | false | Valid |
+| gpt-5 | ❌ injected (o-series) | ✅ injected | ✅ injected | ❌ filtered | false | Valid |
+| llama-3.3-70b (NVIDIA) | ❌ filtered | ✅ injected | ✅ injected | ✅ injected | false | Valid |
+| kimi-k2.6 (moonshot) | n/a | ✅ **overrides client** (1.0) | ✅ injected | ❌ filtered | **true** | Forced |
+| moonshot-v1-128k | n/a | ✅ injected (default) | ✅ injected | ❌ filtered | false | Preserves client |
 
 #### Test Execution
 
@@ -192,114 +194,59 @@ Validates that `RequestTransformer.ApplyExecutionDefaults()` correctly injects d
 dotnet test --filter ClassName=ParameterValidationTests --verbosity detailed
 ```
 
-#### Example Assertions
-
-```csharp
-[Fact]
-public void DeepSeek_ReasoningModels_OmitTopP()
-{
-    var transformer = CreateTransformer();
-    var result = transformer.ApplyExecutionDefaults(
-        body: "...",
-        model: "deepseek-v4-pro",
-        provider: "deepseek"
-    );
-
-    var json = JsonDocument.Parse(result).RootElement;
-    Assert.True(json.TryGetProperty("reasoning_effort", out _));
-    Assert.False(json.TryGetProperty("top_p", out _));  
-}
-```
-
 ---
 
 ### Unit Test Files
 
-The following new test files have been added to significantly increase test coverage:
+The proxy ships with the following test files in `tests/ProxyTests/`:
 
-**1. ReasoningCacheServiceTests** (`tests/ProxyTests/ReasoningCacheServiceTests.cs`)
-- 17 tests for reasoning content caching logic
-- Covers get/set operations, sequential keys, message/delta reasoning, tool calls, invalid JSON, and sequential call scenarios
-
-**2. JsonDefaultsTests** (`tests/ProxyTests/JsonDefaultsTests.cs`)
-- 9 tests for JSON serialization defaults
-- Covers snake_case naming, null handling, deserialization, round-trips, and nested objects
-
-**3. ProviderHttpClientFactoryTests** (`tests/ProxyTests/ProviderHttpClientFactoryTests.cs`)
-- 8 tests for HTTP client creation
-- Covers base address, auth headers, accept headers, OpenRouter headers, fallback env vars, timeouts
-
-**4. ProxyAuthenticationMiddlewareTests** (`tests/ProxyTests/ProxyAuthenticationMiddlewareTests.cs`)
-- 8 tests for authentication middleware
-- Covers null/empty key skipping, valid/invalid bearer tokens, missing auth, case-insensitive bearer, JSON content types
-
-**5. ProviderRegistryTests** (`tests/ProxyTests/ProviderRegistryTests.cs`)
-- 11 tests for provider registry
-- Covers provider/model resolution, default models, mapping updates, candidate resolution
-
-**6. OllamaResponseBuilderTests** (`tests/ProxyTests/OllamaResponseBuilderTests.cs`)
-- 15 tests for Ollama show response building
-- Covers model info, context length, capabilities, recommended parameters, model details
-
-**7. ModelSelectionStoreTests** (`tests/ProxyTests/ModelSelectionStoreTests.cs`)
-- 16 tests for model selection functionality
-- Covers execution config retrieval, provider selections, model entries, priorities
+| File | Tests | Purpose |
+|------|------:|---------|
+| `EndpointTests.cs` | ~20 | End-to-end HTTP behaviour with `WebApplicationFactory` + stub provider |
+| `ParameterValidationTests.cs` | ~50 | Per-model parameter injection (temperature, top_p, max_tokens, reasoning_effort) |
+| `RequestTransformerTests.cs` | ~25 | Filter / inject defaults, streaming SSE → NDJSON, assistant-message cleanup |
+| **`OverrideClientParamsTests.cs`** | **10** | **`override_client_params=true` force-mode overrides client values; default mode preserves them; JSON parsing of true/false/absent** |
+| **`ProviderModelHintTests.cs`** | **7** | **3-level `provider/model` hint resolution in `ProviderRegistry.ResolveModel` + `ResolveCandidates` for `model@provider`** |
+| `ProviderRegistryTests.cs` | ~15 | Provider discovery, `ResolveProvider`, `ResolveCandidates`, mapping updates |
+| `ModelCatalogServiceTests.cs` | ~25 | Cross-provider collisions, priority tie-breaks, JSON config integration |
+| `ModelSelectionStoreTests.cs` | ~50 | `GetExecutionConfigForModel`, `IsPreferredModel`, priority resolution per provider |
+| `ModelSelectionTests.cs` | ~15 | JSON parser invariants (string vs object, `match`/`model`/`id` keys, `enabled` flag) |
+| `ReasoningCacheServiceTests.cs` | ~17 | Multi-turn reasoning content cache |
+| `OllamaResponseBuilderTests.cs` | ~15 | Format conversion OpenAI ↔ Ollama |
+| `ProviderHttpClientFactoryTests.cs` | ~8 | Per-provider `HttpClient` config (auth headers, base URL, fallbacks) |
+| `ProxyAuthenticationMiddlewareTests.cs` | ~8 | `PROXY_API_KEY` bearer-token middleware |
+| `JsonDefaultsTests.cs` | ~9 | `System.Text.Json` snake_case + null handling |
+| **Total** | **329** | |
 
 ---
 
 ### Model Selection Tests
 
-**File:** `tests/ProxyTests/ModelSelectionTests.cs` (deprecated, replaced by `ModelSelectionStoreTests.cs`)
+**Files:** `tests/ProxyTests/ModelSelectionTests.cs`, `ModelSelectionStoreTests.cs`, `ModelCatalogServiceTests.cs`
 
-Validates that `ProviderRegistry` and `ModelCatalogService` correctly resolve model-to-provider candidates and apply defaults.
+Validates that `ProviderRegistry`, `ModelSelectionStore`, and `ModelCatalogService` correctly resolve model-to-provider candidates, apply JSON-driven execution defaults, and handle cross-provider collisions.
 
 #### Test Scenarios
 
-**1. Direct Model Mapping**
-- Request for `deepseek-v4-pro` resolves to `deepseek` provider
-- Request for `gpt-5` resolves to `openai` provider
-- Request for `llama-3.3-70b` resolves to `nvidia` provider
+**1. JSON parsing invariants** (`ModelSelectionTests.cs`)
+- String entries: `["model-a", "model-b"]` parse as plain matches
+- Object entries with `match`/`model`/`id` keys: all three alias forms accepted
+- `enabled: false` is respected
+- `priority` orders entries (lower = higher priority)
+- Malformed files are skipped without crashing the loader
+- Provider name lookup is case-insensitive
+- All `execution` sub-fields parse (context_length, max_output_tokens, supports_tools, supports_vision, family, temperature, top_p, max_tokens, reasoning_effort, timeout_seconds, **override_client_params**)
 
-**2. Fallback Resolution**
-- Unknown model → Try NVIDIA NIM
-- Still no match → Use default provider
-- If default unavailable → Return error
+**2. Curated-provider invariants** (`ModelSelectionStoreTests.cs`)
+- Each provider exposes the expected number of enabled models (5 max, except DeepSeek/Cerebras with 2 and Ollama with 1)
+- `deepseek-v4-pro` and `kimi-k2.6` lookups return valid `ModelExecutionConfig`
+- `gpt-oss-120b` is offered by NVIDIA, Groq, Cerebras, and Ollama Cloud
+- `kimi-k2.6` is offered by NVIDIA, Moonshot, and Ollama Cloud with `override_client_params=true`
 
-**3. Provider Candidate Priority**
-- Primary provider is tried first
-- Secondary provider (NVIDIA fallback) is tried on failure
-- Default provider is last resort
-
-**4. Model Availability**
-- Only enabled models are returned by `/v1/models`
-- Disabled models are filtered out
-- Context windows are correctly populated
-
-#### Example Tests
-
-```csharp
-[Theory]
-[InlineData("deepseek-v4-pro", "deepseek")]
-[InlineData("gpt-5", "openai")]
-[InlineData("llama-3.3-70b", "nvidia")]
-public void ResolveCandidates_KnownModels(string model, string expectedProvider)
-{
-    var registry = new ProviderRegistry(...);
-    var candidates = registry.ResolveCandidates(model);
-
-    Assert.Contains(expectedProvider, candidates);
-}
-
-[Fact]
-public void GetModels_OnlyReturnsEnabled()
-{
-    var catalog = new ModelCatalogService(...);
-    var models = catalog.GetAllModels();
-
-    // All returned models should have enabled=true in config
-    Assert.All(models, m => Assert.True(m.Enabled));
-}
-```
+**3. Cross-provider collisions** (`ModelCatalogServiceTests.cs`)
+- `kimi-k2.6` is offered by Moonshot and Ollama Cloud → Moonshot wins (priority 1)
+- `gpt-oss-120b` is offered by NVIDIA and Groq at the same priority → NVIDIA wins by discovery order
+- `ResolveCandidates` returns ordered failover list
 
 ---
 
@@ -307,56 +254,60 @@ public void GetModels_OnlyReturnsEnabled()
 
 **File:** `tests/ProxyTests/RequestTransformerTests.cs`
 
-Tests the `RequestTransformer` class which:
-- Parses incoming requests
-- Filters parameters based on provider capabilities
-- Injects default values
-- Validates parameter ranges
+Tests the `RequestTransformer` class:
+- Default injection (`temperature`, `top_p`, `max_tokens`, `reasoning_effort`) for missing fields
+- Per-provider filtering (`top_k` removed for OpenAI/DeepSeek/Moonshot; `reasoning_effort` only for DeepSeek/OpenAI o-series)
+- Native reasoner detection (skip `top_p` when `reasoning_effort` is set)
+- `reasoning_content` re-injection for multi-turn conversations
+- Empty assistant-message cleanup
+- Streaming format conversion (SSE ↔ NDJSON)
 
-#### Core Functionality Tests
+The 25 tests in this file cover: `ReplaceModelInRequestBody`, `ModifyRequest` (assistant message handling + reasoning cache), and `ApplyExecutionDefaults` (all the parameter injection rules above).
 
-**1. Parameter Filtering**
-- Remove unsupported parameters per provider
-- Preserve supported parameters
-- Convert parameter formats if needed
+---
 
-**2. Default Injection**
-- Inject `temperature`, `max_tokens`, etc. if missing
-- Apply model-specific defaults
-- Override user values with mandatory constraints
+### Override Client Params Tests
 
-**3. Streaming Format Conversion**
-- OpenAI SSE → Ollama NDJSON (on demand)
-- Ollama NDJSON → OpenAI SSE (on demand)
+**File:** `tests/ProxyTests/OverrideClientParamsTests.cs` (new)
 
-**4. Error Handling**
-- Invalid JSON → Clear error message
-- Unsupported provider → Meaningful exception
-- Missing model → Fallback to default
+10 tests covering the `override_client_params` flag on `ModelExecutionConfig`. When a model has this flag set to `true`, the proxy **overwrites** client-supplied `temperature` / `top_p` / `max_tokens` / `reasoning_effort` with the configured value (instead of only injecting defaults for missing fields). The main use case is **Moonshot Kimi K2.x which mandates `temperature=1.0`** — the proxy must force that value even if the user supplied `0.7`.
 
-#### Example Test
+**`ApplyExecutionDefaults` behavior (6 tests):**
+- `OverrideClientParamsTrue_OverwritesClientTemperature` — kimi-k2.6 + moonshot: 0.7 → 1.0
+- `OverrideClientParamsTrue_OverwritesClientMaxTokens` — kimi-k2.6 + moonshot: 32000 → 4096
+- `OverrideClientParamsTrue_OverwritesClientTopP` — kimi-k2.6 + moonshot: 0.5 → 0.95
+- `OverrideClientParamsFalse_KeepsClientValue` — moonshot-v1-128k preserves client's 0.7 and 1234
+- `OverrideClientParamsFalse_InjectsMissingDefaults` — moonshot-v1-128k injects 0.3 / 4096 when client omits them
+- `OverrideClientParamsTrue_AppliesToAllForcedFields` — all three numeric fields overwritten in one body
 
-```csharp
-[Fact]
-public void TransformRequest_RemovesUnsupportedParameters()
-{
-    var transformer = new RequestTransformer(...);
+**`ModelExecutionConfig` parsing (4 tests):**
+- `OverrideClientParams_DefaultsToFalse` (record-struct default)
+- `OverrideClientParams_TrueIsParsed` from JSON `"override_client_params": true`
+- `OverrideClientParams_FalseIsParsed` from JSON `"override_client_params": false`
+- `OverrideClientParams_AbsentIsParsedAsFalse` (omitted field → false, not null)
 
-    var input = @"{
-        ""model"": ""gpt-5"",
-        ""messages"": [...],
-        ""top_k"": 100,
-        ""reasoning_effort"": ""high""
-    }";
+---
 
-    var output = transformer.TransformRequest("openai", input);
-    var json = JsonDocument.Parse(output).RootElement;
+### Provider Model Hint Tests
 
-    // top_k and reasoning_effort are not supported by OpenAI
-    Assert.False(json.TryGetProperty("top_k", out _));
-    Assert.False(json.TryGetProperty("reasoning_effort", out _));
-}
-```
+**File:** `tests/ProxyTests/ProviderModelHintTests.cs` (new)
+
+7 tests covering the 3-level `provider/model` hint resolution in `ProviderRegistry.ResolveModel`. The OpenAI-style form `"nvidia/qwen3-coder-480b-a35b-instruct"` is accepted, but NVIDIA exposes many models with upstream ids that include a slash prefix (e.g. `qwen/qwen3.5-397b-a17b`), so the resolver tries three strategies in order.
+
+**Level 1 — Verbatim match (1 test):**
+- `nvidia/openai/gpt-oss-120b` → `openai/gpt-oss-120b` (registered under that exact key)
+
+**Level 2 — Strip prefix, look up bare (2 tests):**
+- `groq/qwen3-32b` → `qwen3-32b` (the bare name is registered)
+- `groq/llama-3.3-70b-versatile` → `llama-3.3-70b-versatile`
+
+**Level 3 — Suffix match within hinted provider (2 tests):**
+- `nvidia/qwen3.5-397b-a17b` → `qwen/qwen3.5-397b-a17b` (the actual NVIDIA upstream id)
+- `groq/qwen3.5-397b-a17b` → falls back to default (no groq entry has that suffix — must NOT cross providers)
+
+**`ResolveCandidates` (2 tests):**
+- `ResolveCandidates("openai/gpt-oss-120b@ollama")` — no ollama claimant → single fallback
+- `ResolveCandidates("kimi-k2.6@moonshot")` — exact moonshot candidate, no failover
 
 ---
 
@@ -364,55 +315,71 @@ public void TransformRequest_RemovesUnsupportedParameters()
 
 ### Fixture-Based Isolation
 
-Each test class uses `ProxyFixture` which:
+The shared `ProxyFixture` collection:
 
-1. **Spawns an in-process stub provider** listening on localhost
-   - Simulates OpenAI API endpoints
+1. **Spawns an in-process stub provider** listening on a random localhost port
+   - Simulates OpenAI API endpoints (`/v1/models`, `/v1/chat/completions`, streaming SSE)
    - Returns fake but valid responses
    - No external network calls
 
 2. **Points environment variables at the stub**
    - `PROVIDER_DEEPSEEK_BASE_URL` → local stub
-   - Other providers → real URLs (or overridden in config)
+   - Other providers → real URLs (or cleared in test env so only deepseek is discovered)
 
-3. **Creates a WebApplicationFactory for the proxy**
-   - Fresh DI container per test
+3. **Creates a `WebApplicationFactory<Program>` for the proxy**
    - Real ASP.NET Core middleware pipeline
-   - Full end-to-end testing
+   - Full end-to-end testing with the actual DI graph
 
 ### Test Isolation Pattern
 
 ```csharp
-public class MyTests : IClassFixture<ProxyFixture>
+[Collection("Proxy")]
+public class MyTests
 {
-    private readonly ProxyFixture _fixture;
-
-    public MyTests(ProxyFixture fixture)
-    {
-        _fixture = fixture;
-    }
-
     [Fact]
     public async Task MyTest()
     {
-        var response = await _fixture.Client.GetAsync("/v1/models");
+        HttpResponseMessage r = await Client.GetAsync("/v1/models");
         // Test response...
     }
 }
+```
 
-// Each test gets its own fixture instance (class-scoped)
-// Fixture is torn down after all tests in class complete
+Tests in the same collection share one fixture. Tests that mutate process env vars (e.g. `ModelCatalogServiceTests`, `ModelSelectionStoreTests`) MUST be in the `Proxy` collection so they don't race with the fixture's env-var setup.
+
+### Env-Var Snapshot
+
+Tests that need to manipulate env vars snapshot and restore them in `Dispose`:
+
+```csharp
+public class MyTests : IDisposable
+{
+    private readonly Dictionary<string, string?> _envSnapshot;
+
+    public MyTests()
+    {
+        _envSnapshot = new() { ["PROVIDER_DEEPSEEK_API_KEY"] = Environment.GetEnvironmentVariable("PROVIDER_DEEPSEEK_API_KEY") };
+        Environment.SetEnvironmentVariable("PROVIDER_DEEPSEEK_API_KEY", "test-key");
+    }
+
+    public void Dispose()
+    {
+        foreach (var kv in _envSnapshot) Environment.SetEnvironmentVariable(kv.Key, kv.Value);
+    }
+}
 ```
 
 ### Cleanup
 
-The `ProxyFixture` implements `IDisposable`:
+`ProxyFixture` implements `IDisposable`:
 
 ```csharp
 public void Dispose()
 {
-    _factory?.Dispose();  // Stop proxy
-    _stub?.Dispose();      // Stop stub provider
+    Client.Dispose();
+    _factory.Dispose();
+    _stub.StopAsync().GetAwaiter().GetResult();
+    _stub.DisposeAsync().GetAwaiter().GetResult();
 }
 ```
 
@@ -424,10 +391,12 @@ public void Dispose()
 
 | Scenario | Test Type | File |
 |----------|-----------|------|
-| Testing HTTP endpoint behavior | Endpoint Test | `EndpointTests.cs` |
+| Testing HTTP endpoint behaviour | Endpoint Test | `EndpointTests.cs` |
 | Testing parameter defaults | Parameter Validation | `ParameterValidationTests.cs` |
-| Testing model resolution/selection | Model Selection | `ModelSelectionStoreTests.cs` |
-| Testing internal transformation logic | Request Transformer | `RequestTransformerTests.cs` |
+| Testing model resolution/selection | Model Selection | `ModelSelectionStoreTests.cs` / `ModelCatalogServiceTests.cs` |
+| Testing `RequestTransformer` internals | Request Transformer | `RequestTransformerTests.cs` |
+| Testing `override_client_params` semantics | Force-mode | `OverrideClientParamsTests.cs` |
+| Testing `provider/model` hint resolution | Hint resolver | `ProviderModelHintTests.cs` |
 | Testing authentication middleware | Unit Test | `ProxyAuthenticationMiddlewareTests.cs` |
 | Testing reasoning cache | Unit Test | `ReasoningCacheServiceTests.cs` |
 | Testing HTTP client factory | Unit Test | `ProviderHttpClientFactoryTests.cs` |
@@ -442,16 +411,15 @@ public void Dispose()
 // or [Theory] for parameterized tests
 public async Task DescriptiveTestName()
 {
-    // Arrange: Set up fixture and test data
-    var request = new { model = "deepseek-v4-pro", messages = ... };
+    // Arrange
+    string raw = """{"model":"deepseek-v4-pro","messages":[]}""";
 
-    // Act: Execute the operation
-    var response = await Client.PostAsJsonAsync("/v1/chat/completions", request);
+    // Act
+    string result = sut.ApplyExecutionDefaults(raw, "deepseek-v4-pro", "deepseek");
 
-    // Assert: Verify expected outcome
-    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    var body = await response.Content.ReadAsAsync<JsonElement>();
-    Assert.NotNull(body);
+    // Assert
+    using JsonDocument doc = JsonDocument.Parse(result);
+    Assert.True(doc.RootElement.TryGetProperty("reasoning_effort", out _));
 }
 ```
 
@@ -461,13 +429,10 @@ public async Task DescriptiveTestName()
 [Theory]
 [InlineData("deepseek-v4-pro", "deepseek")]
 [InlineData("gpt-5", "openai")]
-[InlineData("llama-3.3-70b", "nvidia")]
 public void ResolvesCorrectProvider(string model, string expectedProvider)
 {
-    // Single test runs 3 times with different parameters
-    var registry = new ProviderRegistry(...);
-    var candidate = registry.ResolveCandidates(model).First();
-    Assert.Equal(expectedProvider, candidate);
+    IReadOnlyList<(ProviderInfo, string)> cands = registry.ResolveCandidates(model);
+    Assert.Equal(expectedProvider, cands[0].Item1.Name);
 }
 ```
 
@@ -483,7 +448,7 @@ dotnet test --filter MyTest
 
 ### Benchmarking Endpoints
 
-To measure proxy latency, use `BenchmarkDotNet`:
+Use `BenchmarkDotNet`:
 
 ```bash
 dotnet add package BenchmarkDotNet --version 0.13.2
@@ -493,35 +458,36 @@ Create `ProxyBenchmarks.cs`:
 
 ```csharp
 using BenchmarkDotNet.Attributes;
+using Microsoft.AspNetCore.Mvc.Testing;
 
 [MemoryDiagnoser]
 public class ProxyBenchmarks
 {
-    private HttpClient _client;
+    private WebApplicationFactory<Program> _factory = null!;
+    private HttpClient _client = null!;
 
     [GlobalSetup]
     public void Setup()
     {
-        var factory = new WebApplicationFactory<Program>();
-        _client = factory.CreateClient();
+        _factory = new WebApplicationFactory<Program>();
+        _client = _factory.CreateClient();
     }
 
     [Benchmark]
     public async Task GetModels()
     {
-        var response = await _client.GetAsync("/v1/models");
-        _ = await response.Content.ReadAsAsync<JsonElement>();
+        HttpResponseMessage r = await _client.GetAsync("/v1/models");
+        _ = await r.Content.ReadAsStringAsync();
     }
 
     [Benchmark]
     public async Task ChatCompletion_NonStreaming()
     {
-        var request = new { 
-            model = "deepseek-v4-pro",
-            messages = new[] { new { role = "user", content = "hi" } }
-        };
-        var response = await _client.PostAsJsonAsync("/v1/chat/completions", request);
-        _ = await response.Content.ReadAsAsync<JsonElement>();
+        var body = new StringContent(
+            """{"model":"deepseek-v4-pro","messages":[{"role":"user","content":"hi"}]}""",
+            System.Text.Encoding.UTF8, "application/json");
+        HttpResponseMessage r = await _client.PostAsync("/v1/chat/completions", body);
+        _ = await r.Content.ReadAsStringAsync();
     }
 }
 ```
@@ -539,19 +505,16 @@ Use `NBomber` for concurrent request testing:
 using NBomber.CSharp;
 using NBomber.Http.CSharp;
 
-var httpClient = new HttpClient();
-var scenario = Scenario.Create("load_test", async context =>
+HttpClient httpClient = new();
+ScenarioProps scenario = Scenario.Create("load_test", async context =>
 {
-    var request = Http.CreateRequest("GET", "http://localhost:11434/v1/models");
+    Request request = Http.CreateRequest("GET", "http://localhost:11434/v1/models");
     return await Http.Send(httpClient, request);
 })
 .WithoutWarmUp()
-.WithLoadSimulations(
-    Simulation.KeepConstant(copies: 100, during: TimeSpan.FromSeconds(30))
-);
+.WithLoadSimulations(Simulation.KeepConstant(copies: 100, during: TimeSpan.FromSeconds(30)));
 
-NBomberRunner.RegisterScenarios(scenario)
-    .Run()
+NBomberRunner.RegisterScenarios(scenario).Run();
 ```
 
 ---
@@ -567,9 +530,9 @@ name: Test Suite
 
 on:
   push:
-    branches: [main, develop, 'feature/**']
+    branches: [develop, 'feature/**']
   pull_request:
-    branches: [main, develop]
+    branches: [develop]
 
 jobs:
   test:
@@ -601,30 +564,20 @@ jobs:
         with:
           name: test-results-${{ matrix.dotnet-version }}
           path: '**/TestResults/**'
-
-      - name: Publish Test Report
-        uses: dorny/test-reporter@v1
-        if: always()
-        with:
-          name: Test Results (${{ matrix.dotnet-version }})
-          path: '**/TestResults/*.trx'
-          reporter: 'dotnet trx'
 ```
 
-### Pre-commit Hook
+> Note: `main` is the protected release branch and is NOT triggered by this CI.
 
-Install git hook to run tests before commit:
+### Pre-commit Hook
 
 ```bash
 #!/bin/bash
 # .git/hooks/pre-commit
-
 echo "Running tests..."
 dotnet test --configuration Debug
-
 if [ $? -ne 0 ]; then
-    echo "Tests failed. Commit aborted."
-    exit 1
+  echo "Tests failed. Commit aborted."
+  exit 1
 fi
 ```
 
@@ -655,7 +608,7 @@ The stub provider in `ProxyFixture` serves:
   ]
 }
 
-// POST /v1/chat/completions
+// POST /v1/chat/completions (non-streaming)
 {
   "id": "test-id",
   "object": "chat.completion",
@@ -663,21 +616,15 @@ The stub provider in `ProxyFixture` serves:
   "model": "test-model",
   "choices": [{
     "index": 0,
-    "message": {
-      "role": "assistant",
-      "content": "hi from stub"
-    },
+    "message": { "role": "assistant", "content": "hi from stub" },
     "finish_reason": "stop"
   }],
-  "usage": {
-    "prompt_tokens": 1,
-    "completion_tokens": 1,
-    "total_tokens": 2
-  }
+  "usage": { "prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2 }
 }
 
 // Streaming response (SSE)
 data: {"id":"t","object":"chat.completion.chunk",...,"delta":{"content":"Hi"}}
+data: {"id":"t","object":"chat.completion.chunk",...,"delta":{},"finish_reason":"stop"}
 data: [DONE]
 ```
 
@@ -687,39 +634,31 @@ data: [DONE]
 
 ### Test Timeout
 
-If tests hang or timeout:
-
 ```bash
-# Run with extended timeout
 dotnet test --logger "console;verbosity=detailed" --timeout 30000
 ```
 
-Check for:
-- Blocking HTTP calls
-- Infinite loops in parameter validation
-- Fixture cleanup issues
+Common causes:
+- A test mutated process env vars and didn't restore them
+- A new model was added to a JSON config but no test updated
+- HTTP test forgot to dispose its `HttpClient`
 
 ### Test Flakiness
 
-If tests pass/fail intermittently:
-
 ```bash
-# Run test multiple times
 for i in {1..5}; do dotnet test --filter MyTest || break; done
 ```
 
 Common causes:
+- Two test classes mutating the same env var simultaneously (use `[Collection("Proxy")]`)
 - Port collision (ProxyFixture uses port 0 to avoid this)
-- Timing issues in streaming  
-- Race conditions in multi-threaded code
+- Timing in streaming tests
 
-### Memory Leaks
+### xUnit Warnings
 
-Monitor test memory:
+`xUnit1025` (duplicate `InlineData`): two theory rows have the exact same `(arg1, arg2, …)` tuple. xUnit silently drops duplicates. To avoid, either remove the redundant row or change the second row's tuple values to make the assertion unique.
 
-```bash
-dotnet test --logger "console" --collect:"XPlat Code Coverage"
-```
+`xUnit2002` (`Assert.NotNull` on a value type): use `Assert.True(cfg.ContextLength.HasValue)` or a direct property assertion instead.
 
 ---
 
@@ -728,3 +667,4 @@ dotnet test --logger "console" --collect:"XPlat Code Coverage"
 - [API.md](API.md) — Endpoint reference
 - [CONFIGURATION.md](CONFIGURATION.md) — Test configuration options
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Internal component structure
+- [AGENTS.md](AGENTS.md) — Quick reference for AI assistants
