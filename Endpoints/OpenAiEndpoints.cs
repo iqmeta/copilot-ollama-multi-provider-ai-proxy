@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -215,7 +216,9 @@ internal static class OpenAiEndpoints
             using StringContent reqContent = new(bodyText, Encoding.UTF8, "application/json");
             using HttpRequestMessage upstreamReq = new(HttpMethod.Post, provider.Capabilities.ChatPath)
             {
-                Content = reqContent
+                Content = reqContent,
+                Version = HttpVersion.Version11,
+                VersionPolicy = HttpVersionPolicy.RequestVersionExact
             };
             upstreamReq.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
