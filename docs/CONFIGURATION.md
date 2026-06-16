@@ -443,14 +443,14 @@ All curated enabled models and their context window limits. The cap is **up to 9
 
 | Model | Context | Max Output | Notes |
 |-------|---------|-----------|-------|
-| kimi2.7-code | 262k | 262k | 🥇 Podio #1 — Kimi 2.7 code-specialized, force-mode `temperature=1.0` |
-| glm-5.2 | 128k | 32k | 🥈 Podio #2 — GLM 5.2 latest, strong reasoning, timeout 240s |
-| minimax-m3 | 128k | 32k | 🥉 Podio #3 — MiniMax M3, timeout 240s |
-| qwen3-coder:480b | 128k | 32k | 1.5T Qwen coder, native tool support |
-| qwen3-coder-next | 128k | 32k | Qwen coder, next variant |
+| kimi2.7-code | 262k | 262k | 🥇 Podio #1 — Kimi 2.7 code-specialized, force-mode `temperature=1.0`, reasoning |
+| glm-5.2 | 1M | 65k | 🥈 Podio #2 — GLM 5.2 latest, 1M context, timeout 240s |
+| minimax-m3 | 1M | 65k | 🥉 Podio #3 — MiniMax M3, 1M context, timeout 240s |
+| qwen3-coder:480b | 1M | 65k | 1.5T Qwen coder, 1M context, native tool support |
+| qwen3-coder-next | 1M | 65k | Qwen coder-next, 1M context |
 | devstral-2:123b | 128k | 32k | Mistral's devstral coder |
-| kimi-k2.6 | 256k | 256k | Force-mode `temperature=1.0` |
-| deepseek-v4-pro | 128k | 32k | DeepSeek V4 Pro quantised |
+| kimi-k2.6 | 262k | 262k | Force-mode `temperature=1.0`, reasoning |
+| deepseek-v4-pro | 1M | 384k | DeepSeek V4 Pro, native reasoning (`reasoning_effort: high`) |
 | mistral-medium-3.5 | 128k | 32k | Mistral Medium 3.5 |
 
 > The full per-provider roster (with all disabled entries for documentation) is in `config/model-selection/*.json`. To enable a disabled model, set `"enabled": true` in its JSON and restart the proxy.

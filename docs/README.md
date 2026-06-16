@@ -125,11 +125,11 @@ http://localhost:11434/api/chat
 ```
 
 Top picks for coding in VS 2026:
-- `kimi2.7-code` (Ollama Cloud) — Kimi 2.7 code-specialized, 262K context, podio #1
-- `glm-5.2` (Ollama Cloud) — GLM 5.2 latest, strong reasoning, podio #2
-- `minimax-m3` (Ollama Cloud) — MiniMax M3, podio #3
-- `qwen3-coder:480b` (Ollama Cloud) — 1.5T Qwen coder, native tool support
-- `qwen/qwen3-coder-480b-a35b-instruct` (NVIDIA NIM) — same model on NIM with 1M context
+- `kimi2.7-code` (Ollama Cloud) — 🥇 Kimi 2.7 code-specialized, 262K context, force-mode
+- `glm-5.2` (Ollama Cloud) — 🥈 GLM 5.2 latest, 1M context, strong reasoning
+- `minimax-m3` (Ollama Cloud) — 🥉 MiniMax M3, 1M context
+- `qwen3-coder:480b` (Ollama Cloud) — 1.5T Qwen coder, 1M context, native tools
+- `deepseek-v4-pro` (Ollama Cloud) — DeepSeek V4 Pro, 1M context, reasoning
 
 ### Continue.dev / Cursor
 
@@ -210,7 +210,7 @@ Each provider exposes a curated set of **up to 9 enabled models**, prioritised f
 | **OpenRouter** | 5 | qwen3-coder, nemotron-3-super, nemotron-3-ultra, kimi-k2.6, deepseek-v4-pro | Multi-backend passthrough |
 | **Moonshot/Kimi** | 5 | kimi-k2.6, kimi-k2.5, moonshot-v1-{128k,auto,32k} | Kimi K2.x forces `temperature=1.0` |
 | **Cerebras** | 2 | zai-glm-4.7, gpt-oss-120b | Small curated set |
-| **Ollama Cloud** | 9 | kimi2.7-code, glm-5.2, minimax-m3, qwen3-coder:480b, qwen3-coder-next, devstral-2:123b, kimi-k2.6, deepseek-v4-pro, mistral-medium-3.5 | Quantised open models; 🥇🥈🥉 podio |
+| **Ollama Cloud** | 9 | kimi2.7-code, glm-5.2, minimax-m3, qwen3-coder:480b, qwen3-coder-next, devstral-2:123b, kimi-k2.6, deepseek-v4-pro, mistral-medium-3.5 | Podio + 1M context GLM/Minimax/Qwen, reasoning |
 
 **[→ Configuration Guide](docs/CONFIGURATION.md#context-window-specifications)**
 
