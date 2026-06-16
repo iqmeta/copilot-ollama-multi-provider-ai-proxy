@@ -64,11 +64,13 @@ curl http://localhost:11434/health
     "deepseek-v4-pro",
     "deepseek-v4-flash",
     "gpt-5",
-    "kimi-k2.7-code",
+    "kimi2.7-code",
+    "glm-5.2",
+    "minimax-m3",
     "kimi-k2.6",
     "zai-glm-4.7",
     "qwen3-coder:480b",
-    "... (~40 models, 5 enabled per provider, 1-2 for DeepSeek/Cerebras/Ollama)"
+    "... (~45 models, up to 9 enabled per provider)"
   ],
   "defaultModel": "deepseek-v4-pro"
 }
@@ -104,24 +106,30 @@ curl http://localhost:11434/v1/models
       "owned_by": "deepseek"
     },
     {
-      "id": "kimi-k2.7-code",
+      "id": "kimi2.7-code",
       "object": "model",
       "created": 1700000000,
-      "owned_by": "moonshot"
+      "owned_by": "ollama"
     },
     {
-      "id": "kimi-k2.6",
+      "id": "glm-5.2",
       "object": "model",
       "created": 1700000000,
-      "owned_by": "moonshot"
+      "owned_by": "ollama"
     },
-    "... (5 enabled per provider, ~40 total)"
+    {
+      "id": "minimax-m3",
+      "object": "model",
+      "created": 1700000000,
+      "owned_by": "ollama"
+    },
+    "... (up to 9 enabled per provider, ~45 total)"
   ]
 }
 ```
 
 **Notes:**
-- A bare `id` (e.g. `kimi-k2.6`) means the lowest-priority claimant provider wins. If multiple providers offer the same upstream id (e.g. NVIDIA and Groq both expose `openai/gpt-oss-120b`), NVIDIA wins by discovery order (`deepseek, openai, nvidia, openrouter, groq, ollama, moonshot, cerebras`).
+- A bare `id` (e.g. `kimi2.7-code`) means the lowest-priority claimant provider wins. If multiple providers offer the same upstream id (e.g. NVIDIA and Groq both expose `openai/gpt-oss-120b`), NVIDIA wins by discovery order (`deepseek, openai, nvidia, openrouter, groq, ollama, moonshot, cerebras`).
 - A qualified `id` like `kimi-k2.6@moonshot` forces routing to that specific provider with no failover. Use this when you need to pin the upstream.
 - Use `POST /v1/chat/completions` with the chosen id verbatim — the proxy resolves both forms.
 
@@ -159,7 +167,7 @@ Authorization: Bearer {optional-api-key}  (typically not needed for proxy)
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `model` | string | Yes | Model ID (e.g., `deepseek-v4-pro`, `gpt-5`, `kimi-k2.7-code`) |
+| `model` | string | Yes | Model ID (e.g., `deepseek-v4-pro`, `gpt-5`, `kimi2.7-code`, `glm-5.2`) |
 | `messages` | array | Yes | Message history with `role` (user/assistant/system) and `content` |
 | `stream` | boolean | No | Enable streaming mode (default: `false`) |
 | `temperature` | float | No | Sampling temperature (0.0–2.0, default: 0.7) |
@@ -212,7 +220,7 @@ data: [DONE]
 - When `reasoning_effort` is set, `top_p` is omitted per DeepSeek/OpenAI documentation to avoid undefined behavior.
 - `top_k` is automatically filtered for providers that do not support it: DeepSeek, OpenAI, and Moonshot/Kimi. It is preserved for NVIDIA, Groq, and OpenRouter.
 - The proxy caches `reasoning_content` from DeepSeek responses and reinjects it on subsequent assistant messages.
-- **Moonshot Kimi K2.x force-mode:** the proxy always sets `temperature=1.0` for `kimi-k2.7-code`, `kimi-k2.6`, and `kimi-k2.5` regardless of what the client sends. These models reject any request where `temperature ≠ 1.0`. See [Force-Mode Parameter Override](#force-mode-parameter-override).
+- **Kimi K2.x force-mode:** the proxy always sets `temperature=1.0` for `kimi2.7-code`, `kimi-k2.6`, and `kimi-k2.5` regardless of what the client sends. These models reject any request where `temperature ≠ 1.0`. See [Force-Mode Parameter Override](#force-mode-parameter-override).
 - Supported providers: DeepSeek, OpenAI, NVIDIA NIM, Groq, OpenRouter, Ollama Cloud, Moonshot/Kimi, Cerebras.
 
 ---
@@ -328,7 +336,7 @@ Chat completion endpoint (Ollama-compatible).
 curl -X POST http://localhost:11434/api/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "deepseek-v4-pro",
+    "model": "glm-5.2",
     "messages": [
       {"role": "user", "content": "What is Rust?"}
     ],
@@ -339,7 +347,7 @@ curl -X POST http://localhost:11434/api/chat \
 **Request Body:**
 ```json
 {
-  "model": "deepseek-v4-pro",
+  "model": "glm-5.2",
   "messages": [
     {
       "role": "user",
@@ -368,7 +376,7 @@ curl -X POST http://localhost:11434/api/chat \
 **Response (Non-streaming):**
 ```json
 {
-  "model": "deepseek-v4-pro",
+  "model": "glm-5.2",
   "created_at": "2026-06-04T10:30:00Z",
   "message": {
     "role": "assistant",
@@ -386,10 +394,10 @@ curl -X POST http://localhost:11434/api/chat \
 
 **Response (Streaming - NDJSON):**
 ```
-{"model":"deepseek-v4-pro","created_at":"2026-06-04T10:30:00Z","message":{"role":"assistant","content":"Rust"},"done":false}
-{"model":"deepseek-v4-pro","created_at":"2026-06-04T10:30:00Z","message":{"role":"assistant","content":" is"},"done":false}
+{"model":"glm-5.2","created_at":"2026-06-04T10:30:00Z","message":{"role":"assistant","content":"Rust"},"done":false}
+{"model":"glm-5.2","created_at":"2026-06-04T10:30:00Z","message":{"role":"assistant","content":" is"},"done":false}
 ...
-{"model":"deepseek-v4-pro","created_at":"2026-06-04T10:30:00Z","message":{},"done":true,"total_duration":2345000000,"load_duration":234000000,"prompt_eval_count":12,"prompt_eval_duration":500000000,"eval_count":89,"eval_duration":1611000000}
+{"model":"glm-5.2","created_at":"2026-06-04T10:30:00Z","message":{},"done":true,"total_duration":2345000000,"load_duration":234000000,"prompt_eval_count":12,"prompt_eval_duration":500000000,"eval_count":89,"eval_duration":1611000000}
 ```
 
 ---
@@ -448,21 +456,36 @@ curl -X POST http://localhost:11434/v1/chat/completions \
   }'
 ```
 
-### Example 3: Ollama Cloud with Options
+### Example 3: Ollama Cloud — GLM-5.2 (podio #2)
 
 ```bash
 curl -X POST http://localhost:11434/api/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "kimi-k2.7-code",
+    "model": "glm-5.2",
     "messages": [
-      {"role": "user", "content": "summarize cloud computing"}
+      {"role": "user", "content": "explain neural networks"}
     ],
     "options": {
-      "temperature": 1.0,
-      "top_p": 0.95
+      "temperature": 0.2,
+      "top_p": 0.9
     },
     "stream": false
+  }'
+```
+
+### Example 4: Ollama Cloud — Kimi2.7-code (podio #1, force-mode)
+
+```bash
+curl -X POST http://localhost:11434/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "kimi2.7-code",
+    "messages": [
+      {"role": "user", "content": "write a Rust sorting function"}
+    ],
+    "temperature": 1.0,
+    "max_tokens": 16384
   }'
 ```
 
@@ -526,11 +549,11 @@ for attempt in range(3):
 
 ### How the Proxy Selects a Provider
 
-1. **Request arrives** with `model="kimi-k2.7-code"`
+1. **Request arrives** with `model="kimi2.7-code"`
 2. **Proxy resolves** via `ProviderRegistry.ResolveModel()` (3-level hint resolution, see [ARCHITECTURE.md](ARCHITECTURE.md))
 3. **Candidate selection** via `ProviderRegistry.ResolveCandidates()`:
-   - For a bare id like `kimi-k2.7-code`, return every provider that offers it, ordered by `(priority asc, provider order asc)`. Tie-breaks go to the earliest-discovered provider.
-   - For a qualified id like `kimi-k2.7-code@moonshot`, return only that one candidate (no failover).
+   - For a bare id like `kimi2.7-code`, return every provider that offers it, ordered by `(priority asc, provider order asc)`. Tie-breaks go to the earliest-discovered provider.
+   - For a qualified id like `kimi2.7-code@ollama`, return only that one candidate (no failover).
 4. **Failover**: If the primary candidate fails (non-streaming only), try the next candidate in priority order
 5. **Response**: Forward upgraded response in provider-neutral format
 
@@ -558,13 +581,13 @@ Some models have hard requirements that contradict what a client might send. The
 
 The `override_client_params` field on `ModelExecutionConfig` accepts a boolean. When `true`, the proxy **overwrites** client-supplied `temperature` / `top_p` / `max_tokens` / `reasoning_effort` with the configured value (instead of only injecting defaults for missing fields). When `false` or absent (default), the proxy preserves client values and only injects for missing fields.
 
-### Real-world case: Moonshot Kimi K2.x
+### Real-world case: Kimi K2.x
 
-The Kimi K2.7-code, K2.6, and K2.5 models reject any request where `temperature ≠ 1.0`. The proxy addresses this with two lines in `moonshot.json`:
+The Kimi2.7-code, K2.6, and K2.5 models reject any request where `temperature ≠ 1.0`. The proxy addresses this with two lines in the JSON config:
 
 ```json
 {
-  "match": "kimi-k2.7-code",
+  "match": "kimi2.7-code",
   "priority": 1,
   "enabled": true,
   "execution": {
@@ -578,21 +601,21 @@ The Kimi K2.7-code, K2.6, and K2.5 models reject any request where `temperature 
 
 The client sends:
 ```json
-{ "model": "kimi-k2.7-code", "temperature": 0.7, "messages": [...] }
+{ "model": "kimi2.7-code", "temperature": 0.7, "messages": [...] }
 ```
 
-The proxy rewrites the body before forwarding to Moonshot:
+The proxy rewrites the body before forwarding:
 ```json
-{ "model": "kimi-k2.7-code", "temperature": 1.0, "max_tokens": 4096, "messages": [...] }
+{ "model": "kimi2.7-code", "temperature": 1.0, "max_tokens": 4096, "messages": [...] }
 ```
 
 `RequestTransformer.ApplyExecutionDefaults()` is the function that performs this rewrite; the behaviour is exercised end-to-end by `OverrideClientParamsTests.cs` (10 tests covering both directions: force-mode overwrites, default-mode preserves).
 
-### Other models that benefit from force-mode
+### Models that benefit from force-mode
 
 Force-mode is currently enabled for:
 - Moonshot `kimi-k2.7-code`, `kimi-k2.6` and `kimi-k2.5` (the canonical temperature=1.0 case)
-- Ollama Cloud `kimi-k2.6` (inherits the moonshot rule — the Ollama Cloud variant of Kimi is just a passthrough to Moonshot's model)
+- Ollama Cloud `kimi2.7-code` and `kimi-k2.6` (both mirror the Kimi force-mode rule)
 
 For any other model, leave `override_client_params` absent (or `false`) so the client retains control.
 

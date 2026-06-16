@@ -175,8 +175,8 @@ Validates that `RequestTransformer.ApplyExecutionDefaults()` correctly injects d
 **Cerebras Models (2):**
 - ✅ zai-glm-4.7, gpt-oss-120b
 
-**Ollama Cloud Models (5 enabled):**
-- ✅ qwen3-coder:480b, qwen3-coder-next, devstral-2:123b, kimi-k2.6, deepseek-v4-pro
+**Ollama Cloud Models (9 enabled):**
+- ✅ kimi2.7-code, glm-5.2, minimax-m3, qwen3-coder:480b, qwen3-coder-next, devstral-2:123b, kimi-k2.6, deepseek-v4-pro, mistral-medium-3.5
 
 #### Expected Behavior
 

@@ -37,7 +37,7 @@ The proxy is a high-performance ASP.NET Core minimal API application that bridge
 3. **Configuration-Driven** — Model defaults, routing, and force-mode flags via JSON
 4. **Testability** — All services are unit-testable with in-memory fixtures
 5. **Production-Ready** — Connection pooling, HTTP/2, timeout handling
-6. **Curated, Not Exhaustive** — 5 enabled models per provider; chosen for coding in VS 2026 via GitHub Copilot
+6. **Curated, Not Exhaustive** — up to 9 enabled models per provider; chosen for coding in VS 2026 via GitHub Copilot
 
 ### Technology Stack
 
@@ -153,7 +153,7 @@ config/model-selection/
 ├── openrouter.json    # 6 enabled (qwen3.7-plus, qwen3-coder, nemotron-3-super, nemotron-3-ultra, kimi-k2.7-code, deepseek-v4-pro)
 ├── moonshot.json      # 5 enabled (kimi-k2.7-code, kimi-k2.6, kimi-k2.5 — all use force-mode)
 ├── cerebras.json      # 2 enabled
-├── ollamacloud.json   # 5 enabled (includes kimi-k2.6 with force-mode inherited from Moonshot rule)
+├── ollamacloud.json   # 9 enabled (kimi2.7-code, glm-5.2, minimax-m3, qwen3-coder:480b, qwen3-coder-next, devstral-2:123b, kimi-k2.6, deepseek-v4-pro, mistral-medium-3.5)
 └── ollama.json        # 1 enabled (local Ollama; same provider key as ollamacloud)
 ```
 
@@ -491,7 +491,7 @@ Located in `config/model-selection/`:
 
 ### Curated 5-per-provider cap
 
-Each provider exposes **5 enabled models maximum** (DeepSeek and Cerebras expose 2; Ollama Cloud exposes 5 across `ollamacloud.json` + `ollama.json`). This cap is enforced by `ParameterValidationTests.EnabledModelCount_IsCorrect` (per-provider xUnit `[Theory]`). The curation prioritises coding strength for GitHub Copilot in Visual Studio 2026.
+Each provider exposes **up to 9 enabled models** (DeepSeek and Cerebras expose 2; Ollama Cloud exposes 9 across `ollamacloud.json`). The curation prioritises coding strength for GitHub Copilot in Visual Studio 2026.
 
 ---
 
