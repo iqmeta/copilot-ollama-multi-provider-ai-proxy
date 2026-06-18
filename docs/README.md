@@ -1,4 +1,4 @@
-# Co-Pilot Ollama Multi-Provider AI Proxy (Visual Studio 2026 / Visual Stuido Code / etc.)
+# Copilot Ollama Multi-Provider AI Proxy (Visual Studio 2026 / Visual Stuido Code / etc.)
 
 > The fastest way to run DeepSeek, OpenAI, NVIDIA, Groq, OpenRouter, Moonshot/Kimi, Cerebras, and Ollama models in GitHub Copilot, VS BYOM, and Ollama clients — **curated for coding inside Visual Studio 2026**.
 
