@@ -552,7 +552,7 @@ public class ParameterValidationTests
     [InlineData("cerebras", 2)]
     [InlineData("ollama", 10)]        // 9 ollamacloud + 1 ollama.json (mistral)
     [InlineData("ollamacloud", 10)]  // 7 enabled + disabled
-    [InlineData("zenmux", 15)]      // 15 enabled (glm-5.2-free, glm-5.2, kimi-k2.7-code-free, kimi-k2.7-code, kimi-k2.6, qwen3.7-plus, qwen3.7-max, gemini-3.5-flash, gpt-5.5-pro, gpt-5.5, deepseek-v4-pro, deepseek-v4-flash, grok-4.3, grok-build-0.1, qwen3.6-plus)
+    [InlineData("zenmux", 2)]      // 2 enabled (glm-5.2-free, kimi-k2.7-code-free) — solo free tier
     public void EnabledModelCount_IsCorrect(string providerName, int expectedEnabled)
     {
         ModelSelectionStore store = new();
