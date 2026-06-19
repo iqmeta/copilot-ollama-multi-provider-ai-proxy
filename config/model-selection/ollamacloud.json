@@ -2,12 +2,62 @@
   "provider": "ollama",
   "models": [
     {
-      "match": "qwen3-coder:480b",
+      "match": "kimi2.7-code",
       "priority": 1,
       "enabled": true,
       "execution": {
-        "context_length": 128000,
-        "max_output_tokens": 32768,
+        "context_length": 262144,
+        "max_output_tokens": 262144,
+        "supports_tools": true,
+        "supports_vision": false,
+        "supports_reasoning": true,
+        "family": "moonshotai",
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "max_tokens": 16384,
+        "timeout_seconds": 180,
+        "override_client_params": true
+      }
+    },
+    {
+      "match": "glm-5.2",
+      "priority": 2,
+      "enabled": true,
+      "execution": {
+        "context_length": 1000000,
+        "max_output_tokens": 65536,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "glm",
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "max_tokens": 16384,
+        "timeout_seconds": 240
+      }
+    },
+    {
+      "match": "minimax-m3",
+      "priority": 3,
+      "enabled": true,
+      "execution": {
+        "context_length": 1000000,
+        "max_output_tokens": 65536,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "minimax",
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "max_tokens": 16384,
+        "timeout_seconds": 240
+      }
+    },
+    {
+      "match": "qwen3-coder:480b",
+      "priority": 4,
+      "enabled": true,
+      "execution": {
+        "context_length": 1000000,
+        "max_output_tokens": 65536,
         "supports_tools": true,
         "supports_vision": false,
         "family": "qwen",
@@ -19,11 +69,11 @@
     },
     {
       "match": "qwen3-coder-next",
-      "priority": 2,
+      "priority": 5,
       "enabled": true,
       "execution": {
-        "context_length": 128000,
-        "max_output_tokens": 32768,
+        "context_length": 1000000,
+        "max_output_tokens": 65536,
         "supports_tools": true,
         "supports_vision": false,
         "family": "qwen",
@@ -35,7 +85,7 @@
     },
     {
       "match": "devstral-2:123b",
-      "priority": 3,
+      "priority": 6,
       "enabled": true,
       "execution": {
         "context_length": 128000,
@@ -51,13 +101,14 @@
     },
     {
       "match": "kimi-k2.6",
-      "priority": 4,
+      "priority": 7,
       "enabled": true,
       "execution": {
         "context_length": 262144,
         "max_output_tokens": 262144,
         "supports_tools": true,
         "supports_vision": false,
+        "supports_reasoning": true,
         "family": "moonshotai",
         "temperature": 1.0,
         "top_p": 0.95,
@@ -68,42 +119,43 @@
     },
     {
       "match": "deepseek-v4-pro",
-      "priority": 5,
+      "priority": 8,
       "enabled": true,
       "execution": {
-        "context_length": 128000,
-        "max_output_tokens": 32768,
+        "context_length": 1048576,
+        "max_output_tokens": 384000,
         "supports_tools": true,
         "supports_vision": false,
         "family": "deepseek",
         "temperature": 0.2,
         "top_p": 0.9,
         "max_tokens": 16384,
+        "reasoning_effort": "high",
         "timeout_seconds": 180
       }
     },
     {
-      "match": "glm-5.1",
-      "priority": 6,
+      "match": "mistral-medium-3.5",
+      "priority": 9,
       "enabled": true,
       "execution": {
         "context_length": 128000,
         "max_output_tokens": 32768,
         "supports_tools": true,
         "supports_vision": false,
-        "family": "glm",
+        "family": "mistral",
         "temperature": 0.2,
-        "top_p": 0.9,
+        "top_p": 0.95,
         "max_tokens": 16384,
-        "timeout_seconds": 240
+        "timeout_seconds": 180
       }
     },
     {
       "match": "glm-5",
-      "priority": 7,
+      "priority": 10,
       "enabled": false,
       "execution": {
-        "context_length": 128000,
+        "context_length": 1000000,
         "max_output_tokens": 32768,
         "supports_tools": true,
         "supports_vision": false,
@@ -116,7 +168,7 @@
     },
     {
       "match": "mistral-large-3:675b",
-      "priority": 8,
+      "priority": 11,
       "enabled": false,
       "execution": {
         "context_length": 128000,
@@ -132,7 +184,7 @@
     },
     {
       "match": "cogito-2.1:671b",
-      "priority": 9,
+      "priority": 12,
       "enabled": false,
       "execution": {
         "context_length": 128000,
@@ -147,27 +199,11 @@
       }
     },
     {
-      "match": "minimax-m3",
-      "priority": 10,
-      "enabled": true,
-      "execution": {
-        "context_length": 128000,
-        "max_output_tokens": 32768,
-        "supports_tools": true,
-        "supports_vision": false,
-        "family": "minimax",
-        "temperature": 0.2,
-        "top_p": 0.9,
-        "max_tokens": 16384,
-        "timeout_seconds": 240
-      }
-    },
-    {
       "match": "qwen3-vl:235b",
-      "priority": 11,
+      "priority": 13,
       "enabled": false,
       "execution": {
-        "context_length": 128000,
+        "context_length": 1000000,
         "max_output_tokens": 16384,
         "supports_tools": true,
         "supports_vision": true,
@@ -180,11 +216,11 @@
     },
     {
       "match": "qwen3.5:397b",
-      "priority": 12,
+      "priority": 14,
       "enabled": false,
       "execution": {
-        "context_length": 128000,
-        "max_output_tokens": 32768,
+        "context_length": 262144,
+        "max_output_tokens": 16384,
         "supports_tools": true,
         "supports_vision": false,
         "family": "qwen",
@@ -196,7 +232,7 @@
     },
     {
       "match": "gemma4:31b",
-      "priority": 13,
+      "priority": 15,
       "enabled": false,
       "execution": {
         "context_length": 128000,
@@ -212,7 +248,7 @@
     },
     {
       "match": "kimi",
-      "priority": 14,
+      "priority": 16,
       "enabled": false,
       "execution": {
         "context_length": 128000,
