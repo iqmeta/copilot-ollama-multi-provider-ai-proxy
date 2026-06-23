@@ -327,6 +327,56 @@ public class RequestTransformerTests
     }
 
     [Fact]
+    public void ModifyRequest_InjectsReasoningForAssistantMessagesInOrder()
+    {
+        RequestTransformer sut = CreateTransformer(out ReasoningCacheService cache);
+        cache.Set("assistant:0", "first reasoning");
+        cache.Set("assistant:1", "second reasoning");
+
+        using JsonDocument request = JsonDocument.Parse("""
+            {
+              "model": "m",
+              "messages": [
+                { "role": "assistant", "content": "one" },
+                { "role": "assistant", "content": "two" }
+              ]
+            }
+            """);
+
+        string? result = sut.ModifyRequest(request);
+
+        Assert.NotNull(result);
+        using JsonDocument modified = JsonDocument.Parse(result!);
+        JsonElement messages = modified.RootElement.GetProperty("messages");
+        Assert.Equal("first reasoning", messages[0].GetProperty("reasoning_content").GetString());
+        Assert.Equal("second reasoning", messages[1].GetProperty("reasoning_content").GetString());
+    }
+
+    [Fact]
+    public void ModifyRequest_PreservesCachedReasoningOnEmptyAssistantMessage()
+    {
+        RequestTransformer sut = CreateTransformer(out ReasoningCacheService cache);
+        cache.Set("assistant:0", "cached reasoning");
+
+        using JsonDocument request = JsonDocument.Parse("""
+            {
+              "model": "m",
+              "messages": [
+                { "role": "assistant", "content": "" }
+              ]
+            }
+            """);
+
+        string? result = sut.ModifyRequest(request);
+
+        Assert.NotNull(result);
+        using JsonDocument modified = JsonDocument.Parse(result!);
+        JsonElement message = modified.RootElement.GetProperty("messages")[0];
+        Assert.Equal("cached reasoning", message.GetProperty("reasoning_content").GetString());
+        Assert.Equal("", message.GetProperty("content").GetString());
+    }
+
+    [Fact]
     public void ReplaceModelInRequestBody_InvalidJson_ReturnsOriginal()
     {
         RequestTransformer sut = CreateTransformer();

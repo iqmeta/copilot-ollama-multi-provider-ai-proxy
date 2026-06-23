@@ -85,7 +85,11 @@ internal static class OllamaEndpoints
                     return new
                     {
                         name = displayName + ":latest",
-                        model = qualifiedModel,
+                        // Expose the model name without provider qualifier so clients that
+                        // don't expect the @provider form will match easily.
+                        model = routedModel + ":latest",
+                        // Keep the provider-qualified alias in case clients need it for routing.
+                        aliases = new[] { routedModel, qualifiedModel },
                         modified_at = DateTime.UtcNow.ToString("o"),
                         size = 3_826_793_677L,
                         digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000",
@@ -99,14 +103,28 @@ internal static class OllamaEndpoints
                             quantization_level = "none"
                         },
                         capabilities = p.Capabilities,
-                        context_length = p.ContextLength,
-                        max_output_tokens = p.MaxOutputTokens,
-                        input_token_limit = p.ContextLength,
-                        output_token_limit = p.MaxOutputTokens,
-                        supports_tools = p.SupportsTools,
-                        supports_tool_calls = p.SupportsTools,
-                        supports_vision = p.SupportsVision,
-                        supports_images = p.SupportsVision
+                            context_length = p.ContextLength,
+                            max_output_tokens = p.MaxOutputTokens,
+                            input_token_limit = p.ContextLength,
+                            output_token_limit = p.MaxOutputTokens,
+                            supports_tools = p.SupportsTools,
+                            supports_tool_calls = p.SupportsTools,
+                            supports_vision = p.SupportsVision,
+                            supports_images = p.SupportsVision,
+                            model_info = new Dictionary<string, object?>
+                            {
+                                ["general.architecture"] = p.Family,
+                                ["general.basename"] = routedModel,
+                                ["general.context_length"] = p.ContextLength,
+                                ["context_length"] = p.ContextLength,
+                                ["max_output_tokens"] = p.MaxOutputTokens,
+                                ["input_token_limit"] = p.ContextLength,
+                                ["output_token_limit"] = p.MaxOutputTokens,
+                                ["supports_tools"] = p.SupportsTools,
+                                ["supports_tool_calls"] = p.SupportsTools,
+                                ["supports_vision"] = p.SupportsVision,
+                                ["supports_images"] = p.SupportsVision
+                            }
                     };
                 }).ToArray()
             }, JsonDefaults.SnakeCase);
@@ -172,7 +190,20 @@ internal static class OllamaEndpoints
             // ── Ollama Cloud / Native Ollama passthrough ──────────────────
             if (ollamaProvider.Capabilities.ApiFormat == ApiFormat.Ollama)
             {
-                string upstreamBody = ReplaceModelInOllamaRequestBody(body, ollamaUpstreamModel);
+                string sanitizedBody = body;
+                try
+                {
+                    using JsonDocument ollamaDoc = JsonDocument.Parse(body);
+                    string? modifiedRequest = requestTransformer.ModifyRequest(ollamaDoc);
+                    if (modifiedRequest is not null)
+                        sanitizedBody = modifiedRequest;
+                }
+                catch
+                {
+                    // Keep original request body if pre-sanitization parsing fails.
+                }
+
+                string upstreamBody = ReplaceModelInOllamaRequestBody(sanitizedBody, ollamaUpstreamModel);
 
                 if (!isStream)
                 {
