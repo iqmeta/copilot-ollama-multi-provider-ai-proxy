@@ -453,10 +453,25 @@ internal static class OpenAiEndpoints
                 }
 
                 // Copy remaining properties (role, tool_calls, etc.) but skip content if already written
+                // Also sanitize any invalid 'role' values coming from clients: some clients may
+                // set role="tool", which OpenAI-style upstreams reject unless it's a tool
+                // response tied to a preceding tool_calls entry. Replace such roles with
+                // "assistant" to avoid API errors.
                 foreach (JsonProperty mp in msg.EnumerateObject())
                 {
                     if (mp.NameEquals("content") && hasMultiPartContent)
                         continue; // already written
+
+                    if (mp.NameEquals("role") && mp.Value.ValueKind == JsonValueKind.String)
+                    {
+                        string? roleVal = mp.Value.GetString();
+                        if (string.Equals(roleVal, "tool", StringComparison.OrdinalIgnoreCase))
+                        {
+                            writer.WriteString("role", "assistant");
+                            continue;
+                        }
+                    }
+
                     mp.WriteTo(writer);
                 }
 
