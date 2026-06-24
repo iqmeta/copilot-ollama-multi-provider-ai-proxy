@@ -4,6 +4,12 @@
 
 **As of June 2026** — Tested with Visual Studio 2026 Insider Edition · .NET 10 · 336 tests passing
 
+**Known Issues**
+<img src="/33kIssue.png">
+Even /api/show or /api/tags is correct
+https://github.com/microsoft/vscode/issues/299907
+
+
 A high-performance, ultra-low-overhead HTTP proxy that connects GitHub Copilot and Ollama clients to **9 AI providers**: DeepSeek, OpenAI, NVIDIA, Groq, OpenRouter, Moonshot/Kimi, Cerebras, ZenMux, and Ollama Cloud. Built with .NET 10 and ASP.NET Core minimal APIs for maximum throughput and minimal allocations.
 
 | 🏗️ | Details |
