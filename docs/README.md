@@ -4,9 +4,10 @@
 
 **As of June 2026** — Tested with Visual Studio 2026 Insider Edition · .NET 10 · 336 tests passing
 
-**Known Issues**
-<img src="/33kIssue.png">
-Even /api/show or /api/tags is correct
+with VS Code Ollama extension model 1M context is working
+<img src="/ollama-ext.jpg">
+
+*So resolved - VS Code itself Ollama is deprecated*
 https://github.com/microsoft/vscode/issues/299907
 
 
