@@ -1,0 +1,100 @@
+﻿{
+    "generated_at_utc":  "2026-11-11T22:16:53.5038175Z",
+    "summary":  {
+                    "total":  9,
+                    "list_ok":  8,
+                    "chat_ok":  4
+                },
+    "providers":  [
+                      {
+                          "provider":  "deepseek",
+                          "list_status":  "ok",
+                          "models_count":  2,
+                          "chat_status":  "ok",
+                          "chat_model":  "deepseek-flash",
+                          "latency_ms":  906,
+                          "sample_text":  "OK",
+                          "error":  ""
+                      },
+                      {
+                          "provider":  "openai",
+                          "list_status":  "http_401",
+                          "models_count":  0,
+                          "chat_status":  "not_tested",
+                          "chat_model":  "",
+                          "latency_ms":  0,
+                          "sample_text":  "",
+                          "error":  "Error en el servidor remoto: (401) No autorizado."
+                      },
+                      {
+                          "provider":  "groq",
+                          "list_status":  "ok",
+                          "models_count":  11,
+                          "chat_status":  "ok",
+                          "chat_model":  "meta-llama/llama-prompt-guard-2-86m",
+                          "latency_ms":  379,
+                          "sample_text":  "0.0012847321340814233",
+                          "error":  ""
+                      },
+                      {
+                          "provider":  "openrouter",
+                          "list_status":  "ok",
+                          "models_count":  430,
+                          "chat_status":  "ok",
+                          "chat_model":  "deepseek/deepseek-v4.1-flash-1017",
+                          "latency_ms":  674,
+                          "sample_text":  "OK",
+                          "error":  ""
+                      },
+                      {
+                          "provider":  "nvidia",
+                          "list_status":  "ok",
+                          "models_count":  84,
+                          "chat_status":  "http_404",
+                          "chat_model":  "deepseek-ai/deepseek-coder-6.7b-instruct",
+                          "latency_ms":  0,
+                          "sample_text":  "",
+                          "error":  ""
+                      },
+                      {
+                          "provider":  "moonshot",
+                          "list_status":  "ok",
+                          "models_count":  6,
+                          "chat_status":  "http_429",
+                          "chat_model":  "kimi-k2.7-code",
+                          "latency_ms":  0,
+                          "sample_text":  "",
+                          "error":  ""
+                      },
+                      {
+                          "provider":  "ollama-cloud",
+                          "list_status":  "ok",
+                          "models_count":  23,
+                          "chat_status":  "http_402",
+                          "chat_model":  "minimax-m3",
+                          "latency_ms":  0,
+                          "sample_text":  "",
+                          "error":  ""
+                      },
+                      {
+                          "provider":  "cerebras",
+                          "list_status":  "ok",
+                          "models_count":  2,
+                          "chat_status":  "http_402",
+                          "chat_model":  "gpt-oss-120b",
+                          "latency_ms":  0,
+                          "sample_text":  "",
+                          "error":  ""
+                      },
+                      {
+                          "provider":  "anthropic",
+                          "list_status":  "ok",
+                          "models_count":  15,
+                          "chat_status":  "ok",
+                          "chat_model":  "claude-haiku-5-5",
+                          "latency_ms":  851,
+                          "sample_text":  "OK",
+                          "error":  ""
+                      }
+                  ]
+}

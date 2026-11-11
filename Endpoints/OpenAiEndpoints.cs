@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 internal static class OpenAiEndpoints
 {
@@ -62,9 +61,8 @@ internal static class OpenAiEndpoints
                 }
             }
 
-            allModels = allModels.OrderBy(m => m.Provider, StringComparer.OrdinalIgnoreCase)
-                                 .ThenBy(m => m.Model, StringComparer.OrdinalIgnoreCase)
-                                 .ToList();
+            allModels = [.. allModels.OrderBy(m => m.Provider, StringComparer.OrdinalIgnoreCase)
+                                 .ThenBy(m => m.Model, StringComparer.OrdinalIgnoreCase)];
 
             return Results.Json(new
             {
@@ -111,7 +109,7 @@ internal static class OpenAiEndpoints
                 ctx.Response.StatusCode = 400;
                 ctx.Response.ContentType = "application/json";
                 var modelList = providerRegistry.ModelToProvider.Keys.OrderBy(k => k).Take(30);
-                await ctx.Response.WriteAsync($"{{\"error\":\"Model '{System.Text.Json.JsonEncodedText.Encode(reqModel)}' is not mapped to any provider. Available models: {string.Join(", ", modelList)}\",\"code\":\"MODEL_NOT_FOUND\"}}", ct);
+                await ctx.Response.WriteAsync($"{{\"error\":\"Model '{JsonEncodedText.Encode(reqModel)}' is not mapped to any provider. Available models: {string.Join(", ", modelList)}\",\"code\":\"MODEL_NOT_FOUND\"}}", ct);
                 return;
             }
 
@@ -130,14 +128,9 @@ internal static class OpenAiEndpoints
                 candidates = providerRegistry.ResolveRoutePlan(effectiveModel);
             }
 
-            if (candidates.Count > 0)
-            {
-                Console.WriteLine($"[OPENAI-ROUTE] Candidate[0] Provider='{candidates[0].Provider.Name}' Upstream='{candidates[0].UpstreamModel}' BaseUrl='{candidates[0].Provider.Client.BaseAddress}' ChatPath='{candidates[0].Provider.Capabilities.ChatPath}'");
-            }
-            else
-            {
-                Console.WriteLine($"[OPENAI-ROUTE] No candidates resolved for effectiveModel='{effectiveModel}'");
-            }
+            Console.WriteLine(candidates.Count > 0
+                ? $"[OPENAI-ROUTE] Candidate[0] Provider='{candidates[0].Provider.Name}' Upstream='{candidates[0].UpstreamModel}' BaseUrl='{candidates[0].Provider.Client.BaseAddress}' ChatPath='{candidates[0].Provider.Capabilities.ChatPath}'"
+                : $"[OPENAI-ROUTE] No candidates resolved for effectiveModel='{effectiveModel}'");
 
             ctx.Response.Headers["X-Proxy-Requested-Model"] = reqModel;
             ctx.Response.Headers["X-Proxy-Resolved-Model"] = effectiveModel;
@@ -195,6 +188,25 @@ internal static class OpenAiEndpoints
                             lastStatus = ollamaResult.StatusCode;
                             lastBody = ollamaResult.ErrorBody;
                             usageTracker.RecordError(candidateProvider.Name, $"HTTP {ollamaResult.StatusCode}", ollamaResult.StatusCode.ToString(), latencyMs);
+                        }
+                        else if (candidateProvider.Capabilities.ApiFormat == ApiFormat.Anthropic)
+                        {
+                            var swAnthropic = System.Diagnostics.Stopwatch.StartNew();
+                            AnthropicCandidateResult anthropicResult = await HandleAnthropicChatCompletion(
+                                ctx, candidateProvider, candidateBody, effectiveModel, candidateUpstream, isStream: false, i, reasoningCache, usageTracker, requestCt, ct);
+                            swAnthropic.Stop();
+
+                            if (anthropicResult.Handled)
+                            {
+                                providerHealth.RecordSuccess(candidateProvider.Name, effectiveModel);
+                                return;
+                            }
+
+                            failure = anthropicResult.Failure;
+                            latencyMs = swAnthropic.ElapsedMilliseconds;
+                            lastStatus = anthropicResult.StatusCode;
+                            lastBody = anthropicResult.ErrorBody;
+                            usageTracker.RecordError(candidateProvider.Name, $"HTTP {anthropicResult.StatusCode}", anthropicResult.StatusCode.ToString(), latencyMs);
                         }
                         else
                         {
@@ -302,7 +314,7 @@ internal static class OpenAiEndpoints
 
                         lastStreamStatus = ollamaStream.StatusCode;
                         lastStreamBody = ollamaStream.ErrorBody;
-                        usageTracker.RecordError(provider.Name, $"HTTP {ollamaStream.StatusCode}", ollamaStream.StatusCode.ToString(), 0);
+                        usageTracker.RecordError(provider.Name, $"HTTP {ollamaStream.StatusCode}", ollamaStream.StatusCode.ToString());
                         providerHealth.RecordFailure(provider.Name, effectiveModel, ollamaStream.Failure);
 
                         if (!UpstreamFailureClassifier.ShouldFailover(ollamaStream.Failure))
@@ -315,14 +327,38 @@ internal static class OpenAiEndpoints
                         }
                         continue;
                     }
+                    else if (provider.Capabilities.ApiFormat == ApiFormat.Anthropic)
+                    {
+                        AnthropicCandidateResult anthropicStream = await HandleAnthropicChatCompletion(
+                            ctx, provider, bodyText, effectiveModel, upstreamModel, isStream: true, i, reasoningCache, usageTracker, requestCt, ct);
+
+                        if (anthropicStream.Handled)
+                        {
+                            providerHealth.RecordSuccess(provider.Name, effectiveModel);
+                            return;
+                        }
+
+                        lastStreamStatus = anthropicStream.StatusCode;
+                        lastStreamBody = anthropicStream.ErrorBody;
+                        usageTracker.RecordError(provider.Name, $"HTTP {anthropicStream.StatusCode}", anthropicStream.StatusCode.ToString());
+                        providerHealth.RecordFailure(provider.Name, effectiveModel, anthropicStream.Failure);
+
+                        if (!UpstreamFailureClassifier.ShouldFailover(anthropicStream.Failure))
+                            break;
+                        if (i < candidates.Count - 1)
+                        {
+                            proxyLogger.LogFailover(provider.Name, effectiveModel, lastStreamStatus, 0);
+                            providerHealth.RecordFailover(provider.Name, candidates[i + 1].Provider.Name,
+                                effectiveModel, lastStreamStatus, anthropicStream.Failure.Kind, 0);
+                        }
+                        continue;
+                    }
 
                     using StringContent reqContent = new(bodyText, Encoding.UTF8, "application/json");
-                    using HttpRequestMessage upstreamReq = new(HttpMethod.Post, provider.Capabilities.ChatPath)
-                    {
-                        Content = reqContent,
-                        Version = HttpVersion.Version11,
-                        VersionPolicy = HttpVersionPolicy.RequestVersionExact
-                    };
+                    using HttpRequestMessage upstreamReq = new(HttpMethod.Post, provider.Capabilities.ChatPath);
+                    upstreamReq.Content = reqContent;
+                    upstreamReq.Version = HttpVersion.Version11;
+                    upstreamReq.VersionPolicy = HttpVersionPolicy.RequestVersionExact;
                     upstreamReq.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
                     var streamSw = System.Diagnostics.Stopwatch.StartNew();
@@ -444,6 +480,373 @@ internal static class OpenAiEndpoints
     private readonly record struct OllamaCandidateResult(
         bool Handled, int StatusCode, string? ErrorBody, UpstreamFailure Failure);
 
+    /// <summary>The outcome of one Anthropic-format candidate inside the failover loop.</summary>
+    private readonly record struct AnthropicCandidateResult(
+        bool Handled, int StatusCode, string? ErrorBody, UpstreamFailure Failure);
+
+    private static async Task<AnthropicCandidateResult> HandleAnthropicChatCompletion(
+        HttpContext ctx,
+        ProviderInfo provider,
+        string openAiRequestBody,
+        string effectiveModel,
+        string upstreamModel,
+        bool isStream,
+        int candidateIndex,
+        ReasoningCacheService reasoningCache,
+        UsageTrackerService usageTracker,
+        CancellationToken requestCt,
+        CancellationToken clientCt)
+    {
+        string anthropicRequestBody = AnthropicAdapter.BuildAnthropicMessagesRequest(openAiRequestBody, upstreamModel, isStream);
+
+        if (!isStream)
+        {
+            using StringContent content = new(anthropicRequestBody, Encoding.UTF8, "application/json");
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            using HttpResponseMessage response = await provider.Client.SendAsync(
+                new HttpRequestMessage(HttpMethod.Post, provider.Capabilities.ChatPath) { Content = content },
+                requestCt);
+            sw.Stop();
+
+            string respBody = await response.Content.ReadAsStringAsync(clientCt);
+            if (!response.IsSuccessStatusCode)
+            {
+                UpstreamFailure failure = UpstreamFailureClassifier.Classify(
+                    (int)response.StatusCode, CollectResponseHeaders(response), respBody);
+                Console.WriteLine($"[ANTHROPIC-ERROR] Provider='{provider.Name}' Upstream='{upstreamModel}' HTTP={(int)response.StatusCode} Kind={failure.Kind}");
+                return new AnthropicCandidateResult(false, (int)response.StatusCode, respBody, failure);
+            }
+
+            string openAiResponseBody = AnthropicAdapter.ConvertAnthropicToOpenAiCompletion(respBody, effectiveModel);
+            reasoningCache.CacheReasoningFromResponse(openAiResponseBody);
+            StampWinningProvider(ctx, provider, upstreamModel, candidateIndex);
+            ctx.Response.StatusCode = 200;
+            ctx.Response.ContentType = "application/json";
+            await ctx.Response.WriteAsync(openAiResponseBody, clientCt);
+
+            RecordUsageFromResponse(usageTracker, provider.Name, openAiResponseBody, response.Headers, response.TrailingHeaders, sw.ElapsedMilliseconds, effectiveModel);
+            return new AnthropicCandidateResult(true, 200, null, UpstreamFailure.Success);
+        }
+
+        // Streaming Anthropic SSE to OpenAI SSE
+        using StringContent streamContent = new(anthropicRequestBody, Encoding.UTF8, "application/json");
+        using HttpRequestMessage streamReq = new(HttpMethod.Post, provider.Capabilities.ChatPath);
+        streamReq.Content = streamContent;
+        streamReq.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+
+        var streamSw = System.Diagnostics.Stopwatch.StartNew();
+        using HttpResponseMessage streamResp = await provider.Client.SendAsync(
+            streamReq, HttpCompletionOption.ResponseHeadersRead, requestCt);
+        streamSw.Stop();
+
+        if (!streamResp.IsSuccessStatusCode)
+        {
+            string errBody = await streamResp.Content.ReadAsStringAsync(clientCt);
+            UpstreamFailure failure = UpstreamFailureClassifier.Classify(
+                (int)streamResp.StatusCode, CollectResponseHeaders(streamResp), errBody);
+            return new AnthropicCandidateResult(false, (int)streamResp.StatusCode, errBody, failure);
+        }
+
+        StampWinningProvider(ctx, provider, upstreamModel, candidateIndex);
+        ctx.Response.StatusCode = 200;
+        ctx.Response.ContentType = "text/event-stream";
+        ctx.Response.Headers.CacheControl = "no-cache";
+        ctx.Response.Headers["X-Accel-Buffering"] = "no";
+        await ctx.Response.Body.FlushAsync(clientCt);
+
+        var responseBodyFeature = ctx.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpResponseBodyFeature>();
+        responseBodyFeature?.DisableBuffering();
+
+        string chatcmplId = $"chatcmpl-{Guid.NewGuid():N}";
+        long created = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        int emittedToolCallCount = 0;
+        int currentToolCallIndex = -1;
+        long promptTokens = 0, completionTokens = 0;
+        string finishReason = "stop";
+
+        await using Stream respStream = await streamResp.Content.ReadAsStreamAsync(clientCt);
+        using StreamReader sseReader = new(respStream);
+        string? currentEvent = null;
+
+        while (await sseReader.ReadLineAsync(clientCt) is { } line)
+        {
+            if (line.StartsWith("event:", StringComparison.Ordinal))
+            {
+                currentEvent = line[6..].Trim();
+                continue;
+            }
+
+            if (!line.StartsWith("data:", StringComparison.Ordinal))
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                    currentEvent = null;
+                continue;
+            }
+
+            string dataJson = line[5..].Trim();
+            if (string.IsNullOrWhiteSpace(dataJson))
+                continue;
+
+            try
+            {
+                using JsonDocument eventDoc = JsonDocument.Parse(dataJson);
+                JsonElement eventRoot = eventDoc.RootElement;
+                string eventType = currentEvent ?? (eventRoot.TryGetProperty("type", out JsonElement tEl) ? tEl.GetString() ?? "" : "");
+
+                if (eventType == "message_start")
+                {
+                    if (eventRoot.TryGetProperty("message", out JsonElement msgEl))
+                    {
+                        if (msgEl.TryGetProperty("id", out JsonElement idEl) && idEl.ValueKind == JsonValueKind.String)
+                        {
+                            string rawId = idEl.GetString()!;
+                            chatcmplId = rawId.StartsWith("chatcmpl-", StringComparison.OrdinalIgnoreCase) ? rawId : $"chatcmpl-{rawId}";
+                        }
+                        if (msgEl.TryGetProperty("usage", out JsonElement usageEl) && usageEl.TryGetProperty("input_tokens", out JsonElement itEl))
+                        {
+                            promptTokens = itEl.GetInt64();
+                        }
+                    }
+
+                    // Initial role announcement
+                    object roleChunk = new
+                    {
+                        id = chatcmplId,
+                        @object = "chat.completion.chunk",
+                        created,
+                        model = effectiveModel,
+                        choices = new[]
+                        {
+                            new
+                            {
+                                index = 0,
+                                delta = new { role = "assistant" },
+                                finish_reason = (string?)null
+                            }
+                        }
+                    };
+                    await ctx.Response.WriteAsync($"data: {JsonSerializer.Serialize(roleChunk, JsonDefaults.SnakeCase)}\n\n", clientCt);
+                    await ctx.Response.Body.FlushAsync(clientCt);
+                }
+                else if (eventType == "content_block_start")
+                {
+                    if (eventRoot.TryGetProperty("content_block", out JsonElement cbEl) &&
+                        cbEl.TryGetProperty("type", out JsonElement cbType) && cbType.GetString() == "tool_use")
+                    {
+                        currentToolCallIndex = emittedToolCallCount++;
+                        string tcId = cbEl.TryGetProperty("id", out JsonElement idEl) ? idEl.GetString() ?? "" : $"call_{Guid.NewGuid():N}";
+                        string tcName = cbEl.TryGetProperty("name", out JsonElement nameEl) ? nameEl.GetString() ?? "" : "";
+
+                        object toolStartChunk = new
+                        {
+                            id = chatcmplId,
+                            @object = "chat.completion.chunk",
+                            created,
+                            model = effectiveModel,
+                            choices = new[]
+                            {
+                                new
+                                {
+                                    index = 0,
+                                    delta = new
+                                    {
+                                        tool_calls = new[]
+                                        {
+                                            new
+                                            {
+                                                index = currentToolCallIndex,
+                                                id = tcId,
+                                                type = "function",
+                                                function = new { name = tcName, arguments = "" }
+                                            }
+                                        }
+                                    },
+                                    finish_reason = (string?)null
+                                }
+                            }
+                        };
+                        await ctx.Response.WriteAsync($"data: {JsonSerializer.Serialize(toolStartChunk, JsonDefaults.SnakeCase)}\n\n", clientCt);
+                        await ctx.Response.Body.FlushAsync(clientCt);
+                    }
+                }
+                else if (eventType == "content_block_delta")
+                {
+                    if (eventRoot.TryGetProperty("delta", out JsonElement deltaEl))
+                    {
+                        string deltaType = deltaEl.TryGetProperty("type", out JsonElement dtEl) ? dtEl.GetString() ?? "" : "";
+
+                        if (deltaType == "text_delta" && deltaEl.TryGetProperty("text", out JsonElement textEl))
+                        {
+                            string textDelta = textEl.GetString() ?? "";
+                            if (!string.IsNullOrEmpty(textDelta))
+                            {
+                                object textChunk = new
+                                {
+                                    id = chatcmplId,
+                                    @object = "chat.completion.chunk",
+                                    created,
+                                    model = effectiveModel,
+                                    choices = new[]
+                                    {
+                                        new
+                                        {
+                                            index = 0,
+                                            delta = new { content = textDelta },
+                                            finish_reason = (string?)null
+                                        }
+                                    }
+                                };
+                                await ctx.Response.WriteAsync($"data: {JsonSerializer.Serialize(textChunk, JsonDefaults.SnakeCase)}\n\n", clientCt);
+                                await ctx.Response.Body.FlushAsync(clientCt);
+                            }
+                        }
+                        else if (deltaType == "thinking_delta" && deltaEl.TryGetProperty("thinking", out JsonElement thkEl))
+                        {
+                            string thkDelta = thkEl.GetString() ?? "";
+                            if (!string.IsNullOrEmpty(thkDelta))
+                            {
+                                object thkChunk = new
+                                {
+                                    id = chatcmplId,
+                                    @object = "chat.completion.chunk",
+                                    created,
+                                    model = effectiveModel,
+                                    choices = new[]
+                                    {
+                                        new
+                                        {
+                                            index = 0,
+                                            delta = new { reasoning_content = thkDelta },
+                                            finish_reason = (string?)null
+                                        }
+                                    }
+                                };
+                                await ctx.Response.WriteAsync($"data: {JsonSerializer.Serialize(thkChunk, JsonDefaults.SnakeCase)}\n\n", clientCt);
+                                await ctx.Response.Body.FlushAsync(clientCt);
+                            }
+                        }
+                        else if (deltaType == "input_json_delta" && deltaEl.TryGetProperty("partial_json", out JsonElement pjEl))
+                        {
+                            string partialJson = pjEl.GetString() ?? "";
+                            if (!string.IsNullOrEmpty(partialJson))
+                            {
+                                object argChunk = new
+                                {
+                                    id = chatcmplId,
+                                    @object = "chat.completion.chunk",
+                                    created,
+                                    model = effectiveModel,
+                                    choices = new[]
+                                    {
+                                        new
+                                        {
+                                            index = 0,
+                                            delta = new
+                                            {
+                                                tool_calls = new[]
+                                                {
+                                                    new
+                                                    {
+                                                        index = currentToolCallIndex,
+                                                        function = new { arguments = partialJson }
+                                                    }
+                                                }
+                                            },
+                                            finish_reason = (string?)null
+                                        }
+                                    }
+                                };
+                                await ctx.Response.WriteAsync($"data: {JsonSerializer.Serialize(argChunk, JsonDefaults.SnakeCase)}\n\n", clientCt);
+                                await ctx.Response.Body.FlushAsync(clientCt);
+                            }
+                        }
+                        else if (deltaType == "thinking_delta" && deltaEl.TryGetProperty("thinking", out JsonElement thEl))
+                        {
+                            string thinkingDelta = thEl.GetString() ?? "";
+                            if (!string.IsNullOrEmpty(thinkingDelta))
+                            {
+                                object thinkChunk = new
+                                {
+                                    id = chatcmplId,
+                                    @object = "chat.completion.chunk",
+                                    created,
+                                    model = effectiveModel,
+                                    choices = new[]
+                                    {
+                                        new
+                                        {
+                                            index = 0,
+                                            delta = new { reasoning_content = thinkingDelta },
+                                            finish_reason = (string?)null
+                                        }
+                                    }
+                                };
+                                await ctx.Response.WriteAsync($"data: {JsonSerializer.Serialize(thinkChunk, JsonDefaults.SnakeCase)}\n\n", clientCt);
+                                await ctx.Response.Body.FlushAsync(clientCt);
+                            }
+                        }
+                    }
+                }
+                else if (eventType == "message_delta")
+                {
+                    if (eventRoot.TryGetProperty("delta", out JsonElement mDeltaEl) &&
+                        mDeltaEl.TryGetProperty("stop_reason", out JsonElement srEl) && srEl.ValueKind == JsonValueKind.String)
+                    {
+                        string sr = srEl.GetString()!;
+                        finishReason = sr switch
+                        {
+                            "end_turn" => "stop",
+                            "stop_sequence" => "stop",
+                            "max_tokens" => "length",
+                            "tool_use" => "tool_calls",
+                            _ => "stop"
+                        };
+                    }
+                    if (eventRoot.TryGetProperty("usage", out JsonElement uEl) &&
+                        uEl.TryGetProperty("output_tokens", out JsonElement otEl))
+                    {
+                        completionTokens = otEl.GetInt64();
+                    }
+                }
+                else if (eventType == "message_stop")
+                {
+                    if (emittedToolCallCount > 0 && finishReason == "stop")
+                        finishReason = "tool_calls";
+
+                    object finishChunk = new
+                    {
+                        id = chatcmplId,
+                        @object = "chat.completion.chunk",
+                        created,
+                        model = effectiveModel,
+                        choices = new[]
+                        {
+                            new
+                            {
+                                index = 0,
+                                delta = new { },
+                                finish_reason = finishReason
+                            }
+                        }
+                    };
+                    await ctx.Response.WriteAsync($"data: {JsonSerializer.Serialize(finishChunk, JsonDefaults.SnakeCase)}\n\n", clientCt);
+                    await ctx.Response.WriteAsync("data: [DONE]\n\n", clientCt);
+                    await ctx.Response.Body.FlushAsync(clientCt);
+
+                    double streamCost = PricingCatalog.EstimateCostUsd(provider.Name, effectiveModel, promptTokens, completionTokens);
+                    usageTracker.RecordRequest(provider.Name, promptTokens, completionTokens, promptTokens + completionTokens, null, streamSw.ElapsedMilliseconds, streamCost);
+                    return new AnthropicCandidateResult(true, 200, null, UpstreamFailure.Success);
+                }
+            }
+            catch (JsonException) { }
+        }
+
+        // Loop finished without message_stop
+        await ctx.Response.WriteAsync("data: [DONE]\n\n", clientCt);
+        await ctx.Response.Body.FlushAsync(clientCt);
+        return new AnthropicCandidateResult(true, 200, null, UpstreamFailure.Success);
+    }
+
     /// <summary>
     /// Runs one Ollama-format candidate for an OpenAI-surface request.
     ///
@@ -537,7 +940,8 @@ internal static class OpenAiEndpoints
         int emittedToolCallCount = 0;
 
         using StringContent streamContent = new(streamRequestBody, Encoding.UTF8, "application/json");
-        using HttpRequestMessage streamReq = new(HttpMethod.Post, provider.Capabilities.ChatPath) { Content = streamContent };
+        using HttpRequestMessage streamReq = new(HttpMethod.Post, provider.Capabilities.ChatPath);
+        streamReq.Content = streamContent;
         using HttpResponseMessage streamResp = await provider.Client.SendAsync(
             streamReq, HttpCompletionOption.ResponseHeadersRead, requestCt);
 
@@ -564,10 +968,9 @@ internal static class OpenAiEndpoints
         responseBodyFeature?.DisableBuffering();
 
         // Read NDJSON stream line-by-line from Ollama Cloud and convert each chunk to OpenAI SSE format
-        using Stream respStream = await streamResp.Content.ReadAsStreamAsync(clientCt);
+        await using Stream respStream = await streamResp.Content.ReadAsStreamAsync(clientCt);
         using StreamReader ndjsonReader = new(respStream);
-        string? line;
-        while ((line = await ndjsonReader.ReadLineAsync(clientCt)) is not null)
+        while (await ndjsonReader.ReadLineAsync(clientCt) is { } line)
         {
             if (string.IsNullOrWhiteSpace(line)) continue;
 
@@ -662,7 +1065,10 @@ internal static class OpenAiEndpoints
                     return new OllamaCandidateResult(true, 200, null, UpstreamFailure.Success);
                 }
             }
-            catch { }
+            catch (JsonException)
+            {
+                // Ignore malformed NDJSON chunks
+            }
         }
 
         // If we exit the loop without a done signal, send finish anyway
@@ -848,7 +1254,10 @@ internal static class OpenAiEndpoints
                 }
             }
         }
-        catch { }
+        catch (JsonException)
+        {
+            // Invalid JSON response body; proceed with zero usage
+        }
 
         double cost = hasUsage ? PricingCatalog.EstimateCostUsd(providerName, model, promptTokens, completionTokens) : 0;
 

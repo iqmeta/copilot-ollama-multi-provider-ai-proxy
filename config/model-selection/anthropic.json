@@ -1,0 +1,194 @@
+{
+  "provider": "anthropic",
+  "models": [
+    {
+      "match": "claude-sonnet-5-5",
+      "priority": 1,
+      "enabled": true,
+      "execution": {
+        "context_length": 1048576,
+        "max_output_tokens": 131072,
+        "supports_tools": true,
+        "supports_vision": true,
+        "family": "anthropic",
+        "max_tokens": 16384,
+        "temperature": 1.0,
+        "timeout_seconds": 180
+      }
+    },
+    {
+      "match": "claude-haiku-5-5",
+      "priority": 2,
+      "enabled": true,
+      "execution": {
+        "context_length": 1048576,
+        "max_output_tokens": 131072,
+        "supports_tools": true,
+        "supports_vision": true,
+        "family": "anthropic",
+        "max_tokens": 8192,
+        "temperature": 1.0,
+        "timeout_seconds": 90
+      }
+    },
+    {
+      "match": "claude-sonnet-5",
+      "upstream": "claude-sonnet-5-5",
+      "priority": 3,
+      "enabled": true,
+      "execution": {
+        "context_length": 1048576,
+        "max_output_tokens": 131072,
+        "supports_tools": true,
+        "supports_vision": true,
+        "family": "anthropic",
+        "max_tokens": 16384,
+        "temperature": 1.0,
+        "timeout_seconds": 180
+      }
+    },
+    {
+      "match": "claude-haiku-5",
+      "upstream": "claude-haiku-5-5",
+      "priority": 4,
+      "enabled": true,
+      "execution": {
+        "context_length": 1048576,
+        "max_output_tokens": 131072,
+        "supports_tools": true,
+        "supports_vision": true,
+        "family": "anthropic",
+        "max_tokens": 8192,
+        "temperature": 1.0,
+        "timeout_seconds": 90
+      }
+    },
+    {
+      "match": "claude-3-7-sonnet-latest",
+      "priority": 5,
+      "enabled": true,
+      "execution": {
+        "context_length": 200000,
+        "max_output_tokens": 64000,
+        "supports_tools": true,
+        "supports_vision": true,
+        "family": "anthropic",
+        "max_tokens": 8192,
+        "temperature": 1.0,
+        "timeout_seconds": 180
+      }
+    },
+    {
+      "match": "claude-3-5-sonnet-latest",
+      "priority": 6,
+      "enabled": true,
+      "execution": {
+        "context_length": 200000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": true,
+        "family": "anthropic",
+        "max_tokens": 8192,
+        "temperature": 1.0,
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "claude-3-5-haiku-latest",
+      "priority": 7,
+      "enabled": true,
+      "execution": {
+        "context_length": 200000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": true,
+        "family": "anthropic",
+        "max_tokens": 8192,
+        "temperature": 1.0,
+        "timeout_seconds": 90
+      }
+    },
+    {
+      "match": "claude-opus-5-5",
+      "_comment": "Disabled: restricted to Sonnet and Haiku to preserve monthly API quota",
+      "priority": 8,
+      "enabled": false,
+      "execution": {
+        "context_length": 1048576,
+        "max_output_tokens": 131072,
+        "supports_tools": true,
+        "supports_vision": true,
+        "family": "anthropic",
+        "max_tokens": 16384,
+        "temperature": 1.0,
+        "timeout_seconds": 240
+      }
+    },
+    {
+      "match": "claude-opus-5",
+      "upstream": "claude-opus-5-5",
+      "_comment": "Disabled: restricted to Sonnet and Haiku to preserve monthly API quota",
+      "priority": 9,
+      "enabled": false,
+      "execution": {
+        "context_length": 1048576,
+        "max_output_tokens": 131072,
+        "supports_tools": true,
+        "supports_vision": true,
+        "family": "anthropic",
+        "max_tokens": 16384,
+        "temperature": 1.0,
+        "timeout_seconds": 240
+      }
+    },
+    {
+      "match": "claude-3-opus-latest",
+      "_comment": "Disabled: restricted to Sonnet and Haiku to preserve monthly API quota",
+      "priority": 10,
+      "enabled": false,
+      "execution": {
+        "context_length": 200000,
+        "max_output_tokens": 4096,
+        "supports_tools": true,
+        "supports_vision": true,
+        "family": "anthropic",
+        "max_tokens": 4096,
+        "temperature": 1.0,
+        "timeout_seconds": 180
+      }
+    },
+    {
+      "match": "claude-fable-5-2",
+      "_comment": "Disabled: restricted to Sonnet and Haiku to preserve monthly API quota",
+      "priority": 11,
+      "enabled": false,
+      "execution": {
+        "context_length": 1048576,
+        "max_output_tokens": 128000,
+        "supports_tools": true,
+        "supports_vision": true,
+        "family": "anthropic",
+        "max_tokens": 16384,
+        "temperature": 1.0,
+        "timeout_seconds": 240
+      }
+    },
+    {
+      "match": "claude-fable-5",
+      "upstream": "claude-fable-5-2",
+      "_comment": "Disabled: restricted to Sonnet and Haiku to preserve monthly API quota",
+      "priority": 12,
+      "enabled": false,
+      "execution": {
+        "context_length": 1048576,
+        "max_output_tokens": 128000,
+        "supports_tools": true,
+        "supports_vision": true,
+        "family": "anthropic",
+        "max_tokens": 16384,
+        "temperature": 1.0,
+        "timeout_seconds": 240
+      }
+    }
+  ]
+}

@@ -12,7 +12,7 @@ function Get-EnvMap {
     return $map
 }
 
-function Extract-Models($resp) {
+function Get-Models($resp) {
     $models = @()
 
     if ($resp.data) {
@@ -35,7 +35,7 @@ function Extract-Models($resp) {
     return @($models | Where-Object { $_ } | Select-Object -Unique)
 }
 
-function Extract-ChatText($resp) {
+function Get-ChatText($resp) {
     # OpenAI-like
     if ($resp.choices -and $resp.choices.Count -gt 0) {
         $msg = $resp.choices[0].message
@@ -52,6 +52,16 @@ function Extract-ChatText($resp) {
         if (-not [string]::IsNullOrWhiteSpace($resp.message.reasoning)) { return $resp.message.reasoning }
     }
 
+    # Anthropic-like
+    if ($resp.content -and $resp.content.Count -gt 0) {
+        $sampleThk = ''
+        foreach ($b in $resp.content) {
+            if ($b.type -eq 'text' -and -not [string]::IsNullOrWhiteSpace($b.text)) { return $b.text }
+            if ($b.type -eq 'thinking' -and -not [string]::IsNullOrWhiteSpace($b.thinking)) { $sampleThk = $b.thinking }
+        }
+        if (-not [string]::IsNullOrWhiteSpace($sampleThk)) { return $sampleThk }
+    }
+
     return ''
 }
 
@@ -65,7 +75,8 @@ $providers = @(
     @{ name = 'nvidia'; key = $envMap['PROVIDER_NVIDIA_API_KEY']; base = $(if ($envMap['PROVIDER_NVIDIA_BASE_URL']) { $envMap['PROVIDER_NVIDIA_BASE_URL'] } else { 'https://integrate.api.nvidia.com' }); list = '/v1/models'; chat = '/v1/chat/completions'; hint = 'nemotron|qwen|deepseek|gpt-oss'; ollama = $false },
     @{ name = 'moonshot'; key = $envMap['PROVIDER_MOONSHOT_API_KEY']; base = $(if ($envMap['PROVIDER_MOONSHOT_BASE_URL']) { $envMap['PROVIDER_MOONSHOT_BASE_URL'] } else { 'https://api.moonshot.ai' }); list = '/v1/models'; chat = '/v1/chat/completions'; hint = 'kimi'; ollama = $false },
     @{ name = 'ollama-cloud'; key = $(if ($envMap['PROVIDER_OLLAMACLOUD_API_KEY']) { $envMap['PROVIDER_OLLAMACLOUD_API_KEY'] } else { $envMap['PROVIDER_OLLAMA_API_KEY'] }); base = $(if ($envMap['PROVIDER_OLLAMA_BASE_URL']) { $envMap['PROVIDER_OLLAMA_BASE_URL'] } else { 'https://ollama.com' }); list = '/api/tags'; chat = '/api/chat'; hint = 'qwen|deepseek|gpt-oss|llama|kimi|minimax|glm'; ollama = $true },
-    @{ name = 'cerebras'; key = $envMap['PROVIDER_CEREBRAS_API_KEY']; base = $(if ($envMap['PROVIDER_CEREBRAS_BASE_URL']) { $envMap['PROVIDER_CEREBRAS_BASE_URL'] } else { 'https://api.cerebras.ai' }); list = '/v1/models'; chat = '/v1/chat/completions'; hint = 'glm|gpt-oss'; ollama = $false }
+    @{ name = 'cerebras'; key = $envMap['PROVIDER_CEREBRAS_API_KEY']; base = $(if ($envMap['PROVIDER_CEREBRAS_BASE_URL']) { $envMap['PROVIDER_CEREBRAS_BASE_URL'] } else { 'https://api.cerebras.ai' }); list = '/v1/models'; chat = '/v1/chat/completions'; hint = 'glm|gpt-oss'; ollama = $false },
+    @{ name = 'anthropic'; key = $(if ($envMap['PROVIDER_ANTHROPIC_API_KEY']) { $envMap['PROVIDER_ANTHROPIC_API_KEY'] } else { $envMap['ANTHROPIC_API_KEY'] }); base = $(if ($envMap['PROVIDER_ANTHROPIC_BASE_URL']) { $envMap['PROVIDER_ANTHROPIC_BASE_URL'] } else { 'https://api.anthropic.com' }); list = '/v1/models'; chat = '/v1/messages'; hint = 'sonnet|haiku'; ollama = $false; anthropic = $true }
 )
 
 $results = @()
@@ -85,7 +96,14 @@ foreach ($p in $providers) {
         continue
     }
 
-    $headers = @{ Authorization = "Bearer $($p.key)" }
+    $headers = if ($p.anthropic) {
+        $anthropicHeaders = @{ 'x-api-key' = $p.key; 'anthropic-version' = '2023-06-01' }
+        $ws = if ($envMap['PROVIDER_ANTHROPIC_WORKSPACE_ID']) { $envMap['PROVIDER_ANTHROPIC_WORKSPACE_ID'] } else { $envMap['ANTHROPIC_WORKSPACE_ID'] }
+        if ($ws) { $anthropicHeaders['anthropic-workspace-id'] = $ws }
+        $anthropicHeaders
+    } else {
+        @{ Authorization = "Bearer $($p.key)" }
+    }
     $listStatus = 'error'
     $chatStatus = 'not_tested'
     $models = @()
@@ -96,7 +114,7 @@ foreach ($p in $providers) {
 
     try {
         $listResp = Invoke-RestMethod -Uri ($p.base + $p.list) -Method Get -Headers $headers -TimeoutSec 40
-        $models = Extract-Models $listResp
+        $models = Get-Models $listResp
         $listStatus = 'ok'
     }
     catch {
@@ -116,6 +134,14 @@ foreach ($p in $providers) {
                     messages = @(@{ role = 'user'; content = 'Reply exactly OK' })
                 } | ConvertTo-Json -Depth 6
             }
+            elseif ($p.anthropic) {
+                $body = @{
+                    model = $chatModel
+                    stream = $false
+                    max_tokens = 64
+                    messages = @(@{ role = 'user'; content = 'Reply exactly OK' })
+                } | ConvertTo-Json -Depth 6
+            }
             else {
                 $body = @{
                     model = $chatModel
@@ -131,7 +157,7 @@ foreach ($p in $providers) {
             $sw.Stop()
 
             $latency = [int]$sw.Elapsed.TotalMilliseconds
-            $sampleText = Extract-ChatText $chatResp
+            $sampleText = Get-ChatText $chatResp
 
             if ([string]::IsNullOrWhiteSpace($sampleText)) {
                 $chatStatus = 'empty_response'

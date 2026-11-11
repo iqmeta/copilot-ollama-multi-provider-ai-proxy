@@ -3,6 +3,36 @@
 All notable changes to AI Proxy Hub (formerly "Multi-Provider AI Proxy") will be documented in
 this file.
 
+## 2026-11-11 — Native Anthropic provider integration: Claude Messages API, headers, and protocol translation
+
+Added native support for Anthropic (`https://api.anthropic.com`) as the 15th provider in AI Proxy Hub.
+Previously, Claude models could only be accessed via multi-model aggregators (OpenRouter, ZenMux) because
+Anthropic's official API does not conform to the OpenAI chat completions specification: it requires `/v1/messages`,
+custom authentication headers (`x-api-key` and `anthropic-version`), mandatory `max_tokens`, separate top-level
+`system` prompts, and custom SSE event framing (`message_start`, `content_block_delta`, `message_delta`, `message_stop`).
+
+The new `AnthropicAdapter` bridges both inbound surfaces (`/v1/chat/completions` and `/api/chat`), handling bidirectional
+translation for streaming and non-streaming requests, tool execution schemas, and multimodal images.
+
+### Added
+- **Native Anthropic support (`ApiFormat.Anthropic`):** Registered in `ProviderCapabilitiesRegistry` targeting `v1/messages` and `v1/models`.
+- **`AnthropicAdapter`:** Translates OpenAI/Ollama requests to Anthropic `/v1/messages` JSON, enforces strict role alternation by merging consecutive same-role messages, maps tool schemas, converts images, and translates Anthropic responses and SSE streams to OpenAI and Ollama formats.
+- **`ProviderHttpClientFactory` header injection:** Automatically configures `x-api-key`, `anthropic-version: 2023-06-01`, and optional workspace scoping header `anthropic-workspace-id` when dispatching to Anthropic.
+- **`config/model-selection/anthropic.json`:** Curated roster featuring Sonnet and Haiku (`claude-sonnet-5-5`, `claude-haiku-5-5`, `claude-sonnet-5`, `claude-haiku-5`, `claude-3-7-sonnet-latest`, `claude-3-5-sonnet-latest`, `claude-3-5-haiku-latest`).
+- **Catalog & pricing coverage:** Registered Anthropic in `config/free-tier/catalog.json` and added model and provider-level fallback pricing in `PricingCatalog.cs`.
+- **Unit and integration test suites:** Added `AnthropicAdapterTests` and `AnthropicIntegrationTests` covering non-streaming and streaming across both `/v1/chat/completions` and `/api/chat`.
+
+### Changed
+- **Anthropic roster limited to Sonnet and Haiku:** Enabled models in `config/model-selection/anthropic.json` restricted to 7 Sonnet and Haiku models. Higher-cost Opus and Fable models are preserved in catalog/pricing but marked `enabled: false` to maximize the lifespan of the user's monthly credits.
+
+### Fixed
+- **Code cleanliness and static analysis compliance (ReSharper / PSScriptAnalyzer):**
+  - `Endpoints/OpenAiEndpoints.cs`: Removed unused `using System.Text.Json.Serialization;`, applied C# collection expression, removed redundant type qualification on `JsonEncodedText.Encode`, consolidated candidate log branches with ternary operator, removed redundant default argument `latencyMs = 0`, initialized `HttpRequestMessage` properties safely post-declaration, migrated to `await using` and pattern variable declarations in stream loops, and replaced empty general catch blocks with typed `catch (JsonException)`.
+  - `Services/AnthropicAdapter.cs`: Converted `MessageRecord` into primary constructor, removed redundant verbatim string prefix `@` on `GeneratedRegex`, and removed redundant `(string?)` cast on null return in ternary completion content.
+  - `Models/PricingCatalog.cs`: Conformed static readonly field name `Pricing` to ReSharper naming rules, removed 18 redundant `tier = "paid"` default argument passes, and removed unused `ModelPricing.Label` property.
+  - `scripts/test-all-provider-keys.ps1`: Renamed `Extract-Models` and `Extract-ChatText` to `Get-Models` and `Get-ChatText` adhering to `PSScriptAnalyzer(PSUseApprovedVerbs)`.
+  - `tests/ProxyTests/ParameterValidationTests.cs`: Removed redundant `using Xunit;` directive (provided via global usings) and adjusted camelCase on local variables `hasRe` and `hasTp`.
+
 ## 2026-10-06 — Live roster verification: retirements, promotions, and aligning enabled model counts
 
 Full diagnostic sweep across all 14 providers against live APIs and discovery endpoints. In accordance

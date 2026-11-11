@@ -442,7 +442,8 @@ internal sealed class ProviderRegistry
             ProviderCapabilities caps = ProviderCapabilitiesRegistry.Get(providerName);
             string prefix = caps.EnvPrefix;
 
-            string? apiKey = Environment.GetEnvironmentVariable($"PROVIDER_{prefix}_API_KEY");
+            string? apiKey = Environment.GetEnvironmentVariable($"PROVIDER_{prefix}_API_KEY")
+                ?? Environment.GetEnvironmentVariable($"{prefix}_API_KEY");
 
             // Backward compatibility: Ollama Cloud also accepts PROVIDER_OLLAMA_API_KEY.
             if (string.IsNullOrWhiteSpace(apiKey) && providerName == "ollama")

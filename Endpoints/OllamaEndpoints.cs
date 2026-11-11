@@ -365,6 +365,7 @@ internal static class OllamaEndpoints
         CancellationToken ct)
     {
         bool nativeOllama = provider.Capabilities.ApiFormat == ApiFormat.Ollama;
+        bool isAnthropic = provider.Capabilities.ApiFormat == ApiFormat.Anthropic;
 
         // The body is rebuilt per candidate: each provider has its own upstream model id and its
         // own parameter filtering (top_k, reasoning_effort, max_completion_tokens, Moonshot's
@@ -389,6 +390,11 @@ internal static class OllamaEndpoints
                 // Keep original request body if pre-sanitization parsing fails.
             }
             requestBody = requestTransformer.ApplyExecutionDefaults(requestBody, effectiveModel, provider.Capabilities);
+
+            if (isAnthropic)
+            {
+                requestBody = AnthropicAdapter.BuildAnthropicMessagesRequest(requestBody, upstreamModel, isStream);
+            }
         }
 
         var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -418,9 +424,135 @@ internal static class OllamaEndpoints
                 (int)upstream.StatusCode, errBody, failure, sw.ElapsedMilliseconds);
         }
 
-        return nativeOllama
-            ? await WriteNativeOllamaResponse(ctx, provider, upstream, upstreamModel, effectiveModel, isStream, candidateIndex, chatStreaming, usageTracker, sw.ElapsedMilliseconds, ct)
-            : await WriteConvertedOpenAiResponse(ctx, provider, upstream, upstreamModel, effectiveModel, isStream, candidateIndex, chatStreaming, reasoningCache, usageTracker, sw.ElapsedMilliseconds, ct);
+        if (nativeOllama)
+            return await WriteNativeOllamaResponse(ctx, provider, upstream, upstreamModel, effectiveModel, isStream, candidateIndex, chatStreaming, usageTracker, sw.ElapsedMilliseconds, ct);
+        if (isAnthropic)
+            return await WriteAnthropicOllamaResponse(ctx, provider, upstream, upstreamModel, effectiveModel, isStream, candidateIndex, reasoningCache, usageTracker, sw.ElapsedMilliseconds, ct);
+        return await WriteConvertedOpenAiResponse(ctx, provider, upstream, upstreamModel, effectiveModel, isStream, candidateIndex, chatStreaming, reasoningCache, usageTracker, sw.ElapsedMilliseconds, ct);
+    }
+
+    private static async Task<OllamaDispatchResult> WriteAnthropicOllamaResponse(
+        HttpContext ctx, ProviderInfo provider, HttpResponseMessage upstream,
+        string upstreamModel, string effectiveModel, bool isStream, int candidateIndex,
+        ReasoningCacheService reasoningCache, UsageTrackerService usageTracker, long latencyMs, CancellationToken ct)
+    {
+        if (isStream)
+        {
+            StampWinningProvider(ctx, provider, upstreamModel, candidateIndex);
+            ctx.Response.StatusCode = 200;
+            ctx.Response.ContentType = "application/x-ndjson";
+            ctx.Response.Headers["X-Accel-Buffering"] = "no";
+
+            using Stream upstreamStream = await upstream.Content.ReadAsStreamAsync(ct);
+            using StreamReader reader = new(upstreamStream);
+            await using StreamWriter writer = new(ctx.Response.Body, leaveOpen: true) { NewLine = "\n" };
+
+            string? line;
+            string? currentEvent = null;
+            long promptTokens = 0, completionTokens = 0;
+            string finishReason = "stop";
+
+            while ((line = await reader.ReadLineAsync(ct)) is not null)
+            {
+                if (line.StartsWith("event:", StringComparison.Ordinal))
+                {
+                    currentEvent = line[6..].Trim();
+                    continue;
+                }
+                if (!line.StartsWith("data:", StringComparison.Ordinal))
+                {
+                    if (string.IsNullOrWhiteSpace(line)) currentEvent = null;
+                    continue;
+                }
+
+                string dataJson = line[5..].Trim();
+                if (string.IsNullOrWhiteSpace(dataJson)) continue;
+
+                try
+                {
+                    using JsonDocument eventDoc = JsonDocument.Parse(dataJson);
+                    JsonElement eventRoot = eventDoc.RootElement;
+                    string eventType = currentEvent ?? (eventRoot.TryGetProperty("type", out JsonElement tEl) ? tEl.GetString() ?? "" : "");
+
+                    if (eventType == "message_start" && eventRoot.TryGetProperty("message", out JsonElement msgEl)
+                        && msgEl.TryGetProperty("usage", out JsonElement uEl) && uEl.TryGetProperty("input_tokens", out JsonElement itEl))
+                    {
+                        promptTokens = itEl.GetInt64();
+                    }
+                    else if (eventType == "content_block_delta" && eventRoot.TryGetProperty("delta", out JsonElement dEl))
+                    {
+                        if (dEl.TryGetProperty("type", out JsonElement dtEl) && dtEl.GetString() == "text_delta"
+                            && dEl.TryGetProperty("text", out JsonElement txtEl))
+                        {
+                            string txt = txtEl.GetString() ?? "";
+                            if (!string.IsNullOrEmpty(txt))
+                            {
+                                var chunk = new Dictionary<string, object?>
+                                {
+                                    ["model"] = effectiveModel,
+                                    ["created_at"] = DateTime.UtcNow.ToString("o"),
+                                    ["message"] = new Dictionary<string, object?> { ["role"] = "assistant", ["content"] = txt },
+                                    ["done"] = false
+                                };
+                                await writer.WriteLineAsync(JsonSerializer.Serialize(chunk, JsonDefaults.SnakeCase));
+                                await writer.FlushAsync(ct);
+                            }
+                        }
+                    }
+                    else if (eventType == "message_delta")
+                    {
+                        if (eventRoot.TryGetProperty("delta", out JsonElement mdEl) && mdEl.TryGetProperty("stop_reason", out JsonElement srEl))
+                            finishReason = srEl.GetString() ?? "stop";
+                        if (eventRoot.TryGetProperty("usage", out JsonElement mdUsage) && mdUsage.TryGetProperty("output_tokens", out JsonElement otEl))
+                            completionTokens = otEl.GetInt64();
+                    }
+                    else if (eventType == "message_stop")
+                    {
+                        var done = new Dictionary<string, object?>
+                        {
+                            ["model"] = effectiveModel,
+                            ["created_at"] = DateTime.UtcNow.ToString("o"),
+                            ["done"] = true,
+                            ["done_reason"] = finishReason,
+                            ["prompt_eval_count"] = promptTokens,
+                            ["eval_count"] = completionTokens
+                        };
+                        await writer.WriteLineAsync(JsonSerializer.Serialize(done, JsonDefaults.SnakeCase));
+                        await writer.FlushAsync(ct);
+
+                        double streamCost = PricingCatalog.EstimateCostUsd(provider.Name, effectiveModel, promptTokens, completionTokens);
+                        usageTracker.RecordRequest(provider.Name, promptTokens, completionTokens, promptTokens + completionTokens, null, latencyMs, streamCost);
+                        return Served(latencyMs);
+                    }
+                }
+                catch (JsonException) { }
+            }
+
+            return Served(latencyMs);
+        }
+
+        // Non-streaming: convert Anthropic response to Ollama JSON
+        string respBody = await upstream.Content.ReadAsStringAsync(ct);
+        string ollamaJson = AnthropicAdapter.ConvertAnthropicToOllamaChat(respBody, effectiveModel);
+
+        StampWinningProvider(ctx, provider, upstreamModel, candidateIndex);
+        ctx.Response.StatusCode = 200;
+        ctx.Response.ContentType = "application/json";
+        await ctx.Response.WriteAsync(ollamaJson, ct);
+
+        using (JsonDocument doc = JsonDocument.Parse(respBody))
+        {
+            long promptTokens = 0, completionTokens = 0;
+            if (doc.RootElement.TryGetProperty("usage", out JsonElement usage))
+            {
+                if (usage.TryGetProperty("input_tokens", out JsonElement it)) promptTokens = it.GetInt64();
+                if (usage.TryGetProperty("output_tokens", out JsonElement ot)) completionTokens = ot.GetInt64();
+            }
+            double cost = PricingCatalog.EstimateCostUsd(provider.Name, effectiveModel, promptTokens, completionTokens);
+            usageTracker.RecordRequest(provider.Name, promptTokens, completionTokens, promptTokens + completionTokens, null, latencyMs, cost);
+        }
+
+        return Served(latencyMs);
     }
 
     /// <summary>Forwards an Ollama-native upstream response (NDJSON stream or single JSON object).</summary>

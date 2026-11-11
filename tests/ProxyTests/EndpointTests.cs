@@ -79,6 +79,7 @@ public sealed class ProxyFixture : IDisposable
         Environment.SetEnvironmentVariable("PROVIDER_OPENROUTER_API_KEY", null);
         Environment.SetEnvironmentVariable("PROVIDER_GROQ_API_KEY", null);
         Environment.SetEnvironmentVariable("PROVIDER_OLLAMACLOUD_API_KEY", null);
+        Environment.SetEnvironmentVariable("PROVIDER_ANTHROPIC_API_KEY", null);
         Environment.SetEnvironmentVariable("DEEPSEEK_API_KEY", null);
 
         // 3. Start the proxy via WebApplicationFactory
