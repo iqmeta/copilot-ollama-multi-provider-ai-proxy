@@ -1,6 +1,6 @@
 # System Architecture
 
-Comprehensive architecture documentation describing the proxy design, components, and data flow for **14 AI providers** (see [Overview](#overview) for the list).
+Comprehensive architecture documentation describing the proxy design, components, and data flow for **15 AI providers** (see [Overview](#overview) for the list).
 
 ## Table of Contents
 
@@ -24,10 +24,11 @@ Comprehensive architecture documentation describing the proxy design, components
 
 ## Overview
 
-The proxy is a high-performance ASP.NET Core minimal API application that bridges GitHub Copilot, Cursor, Continue.dev, Visual Studio BYOM, and Ollama clients to **fourteen** AI providers:
+The proxy is a high-performance ASP.NET Core minimal API application that bridges GitHub Copilot, Cursor, Continue.dev, Visual Studio BYOM, and Ollama clients to **fifteen** AI providers:
 
 - DeepSeek
 - OpenAI
+- Anthropic
 - Google Gemini
 - NVIDIA NIM
 - Groq

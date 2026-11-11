@@ -82,6 +82,19 @@ internal static class ProviderCapabilitiesRegistry
             EnvPrefix: "ZAI",
             DisplayName: "Z.AI GLM",
             BillingNote: "No public billing API."),
+
+        // ── Direct providers (Anthropic Messages API) ───────────────────────
+        ["anthropic"] = new(
+            Category: ProviderCategory.Direct,
+            ApiFormat: ApiFormat.Anthropic,
+            SupportsReasoningEffort: false,
+            SupportsTopK: true,
+            ChatPath: "v1/messages",
+            ModelsPath: "v1/models",
+            DefaultBaseUrl: "https://api.anthropic.com",
+            EnvPrefix: "ANTHROPIC",
+            DisplayName: "Anthropic",
+            BillingNote: "No public billing API."),
         // ── Multi-model providers (OpenAI-compatible API) ────────────────────
         ["nvidia"] = new(
             Category: ProviderCategory.MultiModel,

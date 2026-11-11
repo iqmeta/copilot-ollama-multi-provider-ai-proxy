@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Xunit;
 
 namespace ProxyTests;
 
@@ -210,11 +209,11 @@ public class ParameterValidationTests
         RequestTransformer sut = CreateTransformer();
         JsonElement result = Transform(sut, model, "openai");
 
-        bool hasRE = result.TryGetProperty("reasoning_effort", out _);
-        bool hasTP = result.TryGetProperty("top_p", out _);
+        bool hasRe = result.TryGetProperty("reasoning_effort", out _);
+        bool hasTp = result.TryGetProperty("top_p", out _);
 
-        if (hasRE)
-            Assert.False(hasTP,
+        if (hasRe)
+            Assert.False(hasTp,
                 $"OpenAI/{model}: top_p must NOT be sent when reasoning_effort is active");
     }
 
@@ -587,6 +586,7 @@ public class ParameterValidationTests
     [InlineData("mistral", 1)]       // codestral-latest enabled (verified live 2026-10-06 HTTP 200 OK)
     [InlineData("cloudflare", 3)]    // llama-3.3-70b, qwen2.5-coder-32b, llama-3.1-8b (verified live 2026-10-06 HTTP 200 OK)
     [InlineData("zenmux", 0)]        // whole roster disabled 2026-07-31: HTTP 402 reject_no_credit on every model
+    [InlineData("anthropic", 7)]        // 7 enabled: Sonnet (5.5, 5, 3.7, 3.5) and Haiku (5.5, 5, 3.5); Opus and Fable disabled
     public void EnabledModelCount_IsCorrect(string providerName, int expectedEnabled)
     {
         ModelSelectionStore store = new();

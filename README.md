@@ -1,7 +1,7 @@
 # AI Proxy Hub
 
 One local endpoint that speaks **both** the Ollama API and the OpenAI API, and routes every
-request to whichever of **14 AI providers** actually serves the model you picked — hopping to
+request to whichever of **15 AI providers** actually serves the model you picked — hopping to
 the next one when a provider throttles you or its free quota runs out.
 
 Built for **GitHub Copilot inside Visual Studio 2026** (BYOM / "bring your own model", which
@@ -10,7 +10,7 @@ Continue.dev, the `ollama` CLI, the OpenAI SDKs.
 
 ```
 Visual Studio 2026 BYOM ──▶ /api/chat  ┐
-Copilot / Cursor / SDKs ──▶ /v1/chat/… ┴──▶ AI Proxy Hub ──▶ DeepSeek · OpenAI · Google
+Copilot / Cursor / SDKs ──▶ /v1/chat/… ┴──▶ AI Proxy Hub ──▶ DeepSeek · OpenAI · Google · Anthropic
                                                              NVIDIA NIM · Groq · OpenRouter
                                                              Moonshot · Cerebras · Z.AI
                                                              ZenMux · Ollama Cloud · Mistral
@@ -21,8 +21,8 @@ Copilot / Cursor / SDKs ──▶ /v1/chat/… ┴──▶ AI Proxy Hub ──�
 |---|---|
 | **Framework** | .NET 10, ASP.NET Core minimal APIs (`CreateSlimBuilder`), zero NuGet dependencies |
 | **Default port** | `11434` — the Ollama port, so clients need no reconfiguration |
-| **Providers** | 14 |
-| **Tests** | 585 passing, xUnit + `WebApplicationFactory`, no network required |
+| **Providers** | 15 |
+| **Tests** | 617 passing, xUnit + `WebApplicationFactory`, no network required |
 | **Deploy** | `dotnet run`, Docker, or docker-compose |
 
 ## Quick start

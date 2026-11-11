@@ -6,7 +6,7 @@ Deep detail lives in `docs/` — read those on demand instead of expanding this 
 
 **AI Proxy Hub** (GitHub: `rodrigo714-gmail/ai-proxy-hub`; assembly/csproj/solution all named
 `ai-proxy-hub`) is an ASP.NET Core minimal-API proxy bridging GitHub Copilot, Cursor,
-Continue.dev, Visual Studio 2026 BYOM and Ollama clients to 14 AI providers through two
+Continue.dev, Visual Studio 2026 BYOM and Ollama clients to 15 AI providers through two
 surfaces: OpenAI-compatible `/v1/*` and Ollama-compatible `/api/*`. Primary workload: Copilot
 code completion + chat in VS 2026. Older names (`vs2026-copilot-deepseek-v4`,
 `deepseek-copilot-proxy`) are retired — never reintroduce them.

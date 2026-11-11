@@ -19,7 +19,10 @@ public enum ApiFormat
     OpenAi,
 
     /// <summary>Ollama-native /api/chat API with NDJSON streaming.</summary>
-    Ollama
+    Ollama,
+
+    /// <summary>Anthropic-native /v1/messages API with SSE streaming.</summary>
+    Anthropic
 }
 
 /// <summary>

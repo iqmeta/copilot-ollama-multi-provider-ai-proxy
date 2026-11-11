@@ -45,7 +45,25 @@ internal sealed class ProviderHttpClientFactory
             BaseAddress = new Uri(normalizedBase)
         };
 
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        if (providerName.Equals("anthropic", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!string.IsNullOrWhiteSpace(apiKey))
+            {
+                client.DefaultRequestHeaders.TryAddWithoutValidation("x-api-key", apiKey);
+            }
+            client.DefaultRequestHeaders.TryAddWithoutValidation("anthropic-version", "2023-06-01");
+
+            string? workspaceId = Environment.GetEnvironmentVariable("PROVIDER_ANTHROPIC_WORKSPACE_ID")
+                ?? Environment.GetEnvironmentVariable("ANTHROPIC_WORKSPACE_ID");
+            if (!string.IsNullOrWhiteSpace(workspaceId))
+            {
+                client.DefaultRequestHeaders.TryAddWithoutValidation("anthropic-workspace-id", workspaceId);
+            }
+        }
+        else
+        {
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        }
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
         if (providerName.Equals("openrouter", StringComparison.OrdinalIgnoreCase))

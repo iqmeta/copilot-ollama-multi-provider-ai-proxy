@@ -156,6 +156,14 @@
       "tos": "caution",
       "signup_url": "https://zenmux.ai",
       "verified_at": "2026-07-31"
+    },
+    {
+      "provider": "anthropic",
+      "free_type": "none",
+      "tos": "ok",
+      "signup_url": "https://console.anthropic.com",
+      "verified_at": "2026-11-11",
+      "notes": "Pay-as-you-go API with prepaid or postpaid monthly usage credits."
     }
   ]
 }
