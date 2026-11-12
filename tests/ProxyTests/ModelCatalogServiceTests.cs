@@ -1,4 +1,3 @@
-using System.Net.Http;
 using ProxyTests.FakeProviders;
 
 namespace ProxyTests;
@@ -21,7 +20,7 @@ public class ModelCatalogServiceTests : IDisposable
 
     // ── Helpers ──────────────────────────────────────────────────────────
 
-    private static (ModelCatalogService catalog, ProviderRegistry registry, FakeProviderHandler handler)
+    private static (ModelCatalogService catalog, ProviderRegistry registry)
         BuildCatalog(IDictionary<string, string[]> perProviderModels, IEnumerable<string>? ollamaProviders = null)
     {
         // "ollama" is the only provider that uses /api/tags and reads
@@ -75,7 +74,7 @@ public class ModelCatalogServiceTests : IDisposable
         ProviderRegistry registry = new(factory);
         ModelSelectionStore store = new();
         ModelCatalogService catalog = new(registry, store);
-        return (catalog, registry, handler);
+        return (catalog, registry);
     }
 
     // ── Per-provider happy path (7 tests) ────────────────────────────────
@@ -83,7 +82,7 @@ public class ModelCatalogServiceTests : IDisposable
     [Fact]
     public async Task Deepseek_OnlyProvider_ClaimsBareName()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]> { ["deepseek"] = ["deepseek-v4-pro"] });
 
         await catalog.RefreshAvailableModels(CancellationToken.None);
@@ -97,7 +96,7 @@ public class ModelCatalogServiceTests : IDisposable
     [Fact]
     public async Task Openai_OnlyProvider_ClaimsBareName()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]> { ["openai"] = ["gpt-5.5"] });
 
         await catalog.RefreshAvailableModels(CancellationToken.None);
@@ -109,7 +108,7 @@ public class ModelCatalogServiceTests : IDisposable
     [Fact]
     public async Task Nvidia_OnlyProvider_ClaimsBareName()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]> { ["nvidia"] = ["nvidia/nemotron-3-super-120b-a12b"] });
 
         await catalog.RefreshAvailableModels(CancellationToken.None);
@@ -120,7 +119,7 @@ public class ModelCatalogServiceTests : IDisposable
     [Fact]
     public async Task Groq_OnlyProvider_ClaimsBareName()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]> { ["groq"] = ["llama-3.3-70b-versatile"] });
 
         await catalog.RefreshAvailableModels(CancellationToken.None);
@@ -131,7 +130,7 @@ public class ModelCatalogServiceTests : IDisposable
     [Fact]
     public async Task Openrouter_OnlyProvider_ClaimsBareName()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]> { ["openrouter"] = ["nvidia/nemotron-3-super-120b-a12b:free"] });
 
         await catalog.RefreshAvailableModels(CancellationToken.None);
@@ -142,7 +141,7 @@ public class ModelCatalogServiceTests : IDisposable
     [Fact]
     public async Task Moonshot_OnlyProvider_ClaimsBareName()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]> { ["moonshot"] = ["kimi-k3"] });
 
         await catalog.RefreshAvailableModels(CancellationToken.None);
@@ -154,7 +153,7 @@ public class ModelCatalogServiceTests : IDisposable
     [Fact]
     public async Task Google_OnlyProvider_ClaimsBareName()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]> { ["google"] = ["models/gemini-4-hydrogen"] });
 
         await catalog.RefreshAvailableModels(CancellationToken.None);
@@ -168,7 +167,7 @@ public class ModelCatalogServiceTests : IDisposable
     [Fact]
     public async Task Ollama_OnlyProvider_ClaimsBareName()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(
                 new Dictionary<string, string[]> { ["ollama"] = ["deepseek-v4-pro"] },
                 ollamaProviders: ["ollama"]);
@@ -189,7 +188,7 @@ public class ModelCatalogServiceTests : IDisposable
         //   nvidia.json p9 (match "openai/gpt-oss-20b").
         // Lower priority number wins outright → groq, which also matches reality:
         // Groq answers this model in ~2s where NVIDIA is slower.
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(
                 new Dictionary<string, string[]>
                 {
@@ -225,7 +224,7 @@ public class ModelCatalogServiceTests : IDisposable
     {
         // moonshot.json p1 and ollama.json p1 both claim "kimi-k2.7-code";
         // the tie is broken by provider discovery order (moonshot before ollama).
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(
                 new Dictionary<string, string[]>
                 {
@@ -253,7 +252,7 @@ public class ModelCatalogServiceTests : IDisposable
     [Fact]
     public async Task ModelId_NotInAnyJson_IsNotExposed()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]> { ["moonshot"] = ["totally-unconfigured-xyz"] });
 
         await catalog.RefreshAvailableModels(CancellationToken.None);
@@ -269,7 +268,7 @@ public class ModelCatalogServiceTests : IDisposable
     [Fact]
     public void ResolveCandidates_NullModel_ReturnsDefaultProvider()
     {
-        (_, ProviderRegistry registry, _) =
+        (_, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]> { ["deepseek"] = ["deepseek-v4-pro"] });
 
         IReadOnlyList<(ProviderInfo Provider, string UpstreamModel)> cands = registry.ResolveCandidates(null);
@@ -281,7 +280,7 @@ public class ModelCatalogServiceTests : IDisposable
     [Fact]
     public void ResolveCandidates_EmptyModel_ReturnsDefaultProvider()
     {
-        (_, ProviderRegistry registry, _) =
+        (_, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]> { ["deepseek"] = ["deepseek-v4-pro"] });
 
         IReadOnlyList<(ProviderInfo Provider, string UpstreamModel)> cands = registry.ResolveCandidates("");
@@ -312,7 +311,7 @@ public class ModelCatalogServiceTests : IDisposable
         Dictionary<string, List<string>> perProvider = new(StringComparer.OrdinalIgnoreCase);
         foreach (string file in Directory.EnumerateFiles(configDir, "*.json"))
         {
-            using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(file));
+            using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(file));
             string provider = doc.RootElement.GetProperty("provider").GetString()!.Trim().ToLowerInvariant();
             foreach (System.Text.Json.JsonElement entry in doc.RootElement.GetProperty("models").EnumerateArray())
             {
@@ -351,7 +350,7 @@ public class ModelCatalogServiceTests : IDisposable
             return; // nothing configured; trivially passes
         }
 
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(
                 perProvider.ToDictionary(kv => kv.Key, kv => kv.Value.ToArray()),
                 ollamaProviders: perProvider.Keys.Where(k => k.Equals("ollama", StringComparison.OrdinalIgnoreCase)));
@@ -380,7 +379,7 @@ public class ModelCatalogServiceTests : IDisposable
     {
         // Both moonshot.json and ollama.json give "kimi-k2.7-code" priority 1, so the
         // tie falls through to provider discovery order → [moonshot, ollama].
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(
                 new Dictionary<string, string[]>
                 {
@@ -404,7 +403,7 @@ public class ModelCatalogServiceTests : IDisposable
         // nvidia and groq both offer "openai/gpt-oss-20b"; ollama offers "gpt-oss:20b".
         // The qualified alias "openai/gpt-oss-20b@nvidia" must resolve to nvidia,
         // even if the bare-name winner is groq. Single-candidate resolution, no failover.
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(
                 new Dictionary<string, string[]>
                 {
@@ -425,4 +424,4 @@ public class ModelCatalogServiceTests : IDisposable
 }
 
 [CollectionDefinition("CatalogTests", DisableParallelization = true)]
-public class CatalogTestsCollection { }
+public class CatalogTestsCollection;

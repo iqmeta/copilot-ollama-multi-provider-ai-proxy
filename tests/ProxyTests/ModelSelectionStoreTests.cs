@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace ProxyTests;
 
 public class ModelSelectionStoreTests

@@ -20,7 +20,6 @@ namespace ProxyTests;
 public class ImageSupportTests
 {
     private readonly ModelSelectionStore _store = new();
-    private readonly ProviderHttpClientFactory _factory = new();
 
     /// <summary>
     /// Helper: invoca BuildOllamaChatRequest (método privado en OpenAiEndpoints)
@@ -54,7 +53,7 @@ public class ImageSupportTests
                 if (msg.TryGetProperty("content", out JsonElement content) && content.ValueKind == JsonValueKind.Array)
                 {
                     hasMultiPartContent = true;
-                    System.Text.StringBuilder textContent = new();
+                    StringBuilder textContent = new();
 
                     foreach (JsonElement part in content.EnumerateArray())
                     {
@@ -174,11 +173,7 @@ public class ImageSupportTests
                         }
                         writer.WriteEndArray();
                     }
-                    else if (mp.NameEquals("images"))
-                    {
-                        continue;
-                    }
-                    else
+                    else if (!mp.NameEquals("images"))
                     {
                         mp.WriteTo(writer);
                     }
@@ -436,9 +431,11 @@ public class ImageSupportTests
     [Fact]
     public void ModelSelectionStore_OllamaCloud_EnabledModels_DoNotClaimVision()
     {
-        ModelSelectionEntry[] enabled = _store.GetProviderModelSelections("ollama")
-            .Where(e => e.Enabled)
-            .ToArray();
+        ModelSelectionEntry[] enabled =
+        [
+            .. _store.GetProviderModelSelections("ollama")
+                .Where(e => e.Enabled)
+        ];
 
         Assert.NotEmpty(enabled);
         foreach (ModelSelectionEntry entry in enabled)
@@ -582,16 +579,4 @@ public class ImageSupportTests
             Assert.NotEmpty(url);
         }
     }
-}
-
-/// <summary>
-/// Serialization helper to match the JSON defaults used by the proxy.
-/// </summary>
-file static class ImageTestJsonDefaults
-{
-    public static readonly JsonSerializerOptions SnakeCase = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
 }

@@ -1,4 +1,3 @@
-using System.Net.Http;
 using ProxyTests.FakeProviders;
 
 namespace ProxyTests;
@@ -28,7 +27,7 @@ public class RoutingDiagnosticTests : IDisposable
     /// <summary>
     /// Builds a ProviderRegistry + ModelCatalogService with fake in-memory providers.
     /// </summary>
-    private static (ModelCatalogService catalog, ProviderRegistry registry, FakeProviderHandler handler)
+    private static (ModelCatalogService catalog, ProviderRegistry registry)
         BuildCatalog(IDictionary<string, string[]> perProviderModels, IEnumerable<string>? ollamaProviders = null)
     {
         HashSet<string> ollama = new(ollamaProviders ?? [], StringComparer.OrdinalIgnoreCase);
@@ -65,7 +64,7 @@ public class RoutingDiagnosticTests : IDisposable
         ProviderRegistry registry = new(factory);
         ModelSelectionStore store = new();
         ModelCatalogService catalog = new(registry, store);
-        return (catalog, registry, handler);
+        return (catalog, registry);
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -80,7 +79,7 @@ public class RoutingDiagnosticTests : IDisposable
     [Fact]
     public async Task KimiK27Code_OnlyInOllamaCloud_RoutesToOllama()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]>
             {
                 ["deepseek"] = ["deepseek-v4-pro"],
@@ -99,7 +98,7 @@ public class RoutingDiagnosticTests : IDisposable
     [Fact]
     public async Task Glm52_OnlyInOllamaCloud_RoutesToOllama()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]>
             {
                 ["deepseek"] = ["deepseek-v4-pro"],
@@ -119,7 +118,7 @@ public class RoutingDiagnosticTests : IDisposable
     [Fact]
     public async Task GptOss120b_OnlyInOllamaCloud_RoutesToOllama()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]>
             {
                 ["deepseek"] = ["deepseek-v4-pro", "other-model"],
@@ -148,7 +147,7 @@ public class RoutingDiagnosticTests : IDisposable
     [Fact]
     public async Task KimiK27Code_SharedBetweenMoonshotAndOllama_RoutesToMoonshot()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]>
             {
                 ["moonshot"] = ["kimi-k2.7-code"],
@@ -171,12 +170,12 @@ public class RoutingDiagnosticTests : IDisposable
 
     /// <summary>
     /// deepseek-v4-pro está en deepseek.json (prio 1) y en ollamacloud.json (prio 8).
-    /// Debe enrutar a deepseek (prio 1 < 8), NO a ollama.
+    /// Debe enrutar a deepseek (prio 1 &lt; 8), NO a ollama.
     /// </summary>
     [Fact]
     public async Task DeepSeekV4Pro_SharedBetweenDeepSeekAndOllama_RoutesToDeepSeek()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]>
             {
                 ["deepseek"] = ["deepseek-v4-pro"],
@@ -198,7 +197,7 @@ public class RoutingDiagnosticTests : IDisposable
     [Fact]
     public async Task Nemotron3Ultra_OnlyInOllamaCloud_RoutesToOllama()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]>
             {
                 ["deepseek"] = ["deepseek-v4-pro"],
@@ -217,7 +216,7 @@ public class RoutingDiagnosticTests : IDisposable
     [Fact]
     public async Task DeepSeekV4Flash_OnlyInDeepSeek_RoutesToDeepSeek()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]>
             {
                 ["deepseek"] = ["deepseek-v4-flash"],
@@ -238,7 +237,7 @@ public class RoutingDiagnosticTests : IDisposable
     [Fact]
     public async Task QualifiedAlias_DeepSeekV4ProAtOllama_RoutesToOllama()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]>
             {
                 ["deepseek"] = ["deepseek-v4-pro"],
@@ -258,7 +257,7 @@ public class RoutingDiagnosticTests : IDisposable
     [Fact]
     public async Task QualifiedAlias_DeepSeekV4ProAtDeepSeek_RoutesToDeepSeek()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]>
             {
                 ["deepseek"] = ["deepseek-v4-pro"],
@@ -282,7 +281,7 @@ public class RoutingDiagnosticTests : IDisposable
     [Fact]
     public async Task OnlyOllamaCloud_NoOtherProvider_DeepSeekV4Pro_RoutesToOllama()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]>
             {
                 ["ollama"] = ["deepseek-v4-pro", "kimi-k2.7-code", "gpt-oss:120b", "glm-5.3"],
@@ -311,7 +310,7 @@ public class RoutingDiagnosticTests : IDisposable
     [Fact]
     public async Task ApiTags_ExposesQualifiedAliasesForDisambiguation()
     {
-        (ModelCatalogService catalog, ProviderRegistry registry, _) =
+        (ModelCatalogService catalog, ProviderRegistry registry) =
             BuildCatalog(new Dictionary<string, string[]>
             {
                 ["deepseek"] = ["deepseek-v4-pro"],

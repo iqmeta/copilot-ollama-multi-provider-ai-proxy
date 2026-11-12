@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Xunit;
 
 namespace ProxyTests;
 
@@ -48,7 +47,7 @@ public class ModelSelectionTests
                     {
                         string? match = item.GetString();
                         if (!string.IsNullOrWhiteSpace(match))
-                            entries.Add(new ModelSelectionEntry(match!, idx, true, new ModelExecutionConfig()));
+                            entries.Add(new ModelSelectionEntry(match, idx, true, new ModelExecutionConfig()));
                         continue;
                     }
                     if (item.ValueKind != JsonValueKind.Object) continue;
@@ -77,7 +76,7 @@ public class ModelSelectionTests
                             SupportsVision: execE.TryGetProperty("supports_vision", out JsonElement svE) && svE.ValueKind is JsonValueKind.True or JsonValueKind.False ? svE.GetBoolean() : null,
                             Family: execE.TryGetProperty("family", out JsonElement famE) && famE.ValueKind == JsonValueKind.String ? famE.GetString() : null,
                             Temperature: execE.TryGetProperty("temperature", out JsonElement tempE) && tempE.ValueKind == JsonValueKind.Number ? tempE.GetDouble() : null,
-                            TopP: execE.TryGetProperty("top_p", out JsonElement topPE) && topPE.ValueKind == JsonValueKind.Number ? topPE.GetDouble() : null,
+                            TopP: execE.TryGetProperty("top_p", out JsonElement topPe) && topPe.ValueKind == JsonValueKind.Number ? topPe.GetDouble() : null,
                             MaxTokensPreferred: execE.TryGetProperty("max_tokens", out JsonElement maxTokE) && maxTokE.ValueKind == JsonValueKind.Number ? maxTokE.GetInt32() : null,
                             ReasoningEffort: execE.TryGetProperty("reasoning_effort", out JsonElement reE) && reE.ValueKind == JsonValueKind.String ? reE.GetString() : null,
                             TimeoutSeconds: execE.TryGetProperty("timeout_seconds", out JsonElement timeoutE) && timeoutE.ValueKind == JsonValueKind.Number ? timeoutE.GetInt32() : null,
@@ -85,11 +84,11 @@ public class ModelSelectionTests
                         );
                     }
 
-                    entries.Add(new ModelSelectionEntry(matchValue!, priority, enabled, exec));
+                    entries.Add(new ModelSelectionEntry(matchValue, priority, enabled, exec));
                 }
 
                 if (entries.Count > 0)
-                    selections[provider] = entries.OrderBy(x => x.Priority).ToArray();
+                    selections[provider] = [.. entries.OrderBy(x => x.Priority)];
             }
             catch { /* ignore malformed selection files */ }
         }
@@ -187,7 +186,7 @@ public class ModelSelectionTests
             """;
 
         var selections = LoadFromJson(json);
-        string[] ordered = selections["test"].Select(e => e.Match).ToArray();
+        string[] ordered = [.. selections["test"].Select(e => e.Match)];
 
         Assert.Equal(["high", "medium", "low"], ordered);
     }
@@ -323,7 +322,7 @@ public class ModelSelectionTests
         Assert.True(selections.ContainsKey("nvidia"));
         // The curated coding-first picks, all verified present in NVIDIA's live catalog.
         // deepseek-ai/deepseek-v4-pro was retired 2026-09-14 (not offered upstream), replaced by nemotron-3-ultra-550b-a55b.
-        ModelSelectionEntry[] enabled = selections["nvidia"].Where(e => e.Enabled).ToArray();
+        ModelSelectionEntry[] enabled = [.. selections["nvidia"].Where(e => e.Enabled)];
         Assert.True(enabled.Length >= 3, $"Expected >= 3 enabled NVIDIA models, got {enabled.Length}");
         Assert.Contains(enabled, e => e.Match == "nvidia/nemotron-3.5-super-vl-120b-a12b");
         Assert.Contains(enabled, e => e.Match == "openai/gpt-oss-20b");
