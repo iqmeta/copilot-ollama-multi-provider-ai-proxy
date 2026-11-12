@@ -108,9 +108,8 @@
     {
       "match": "minimaxai/minimax-m3",
       "priority": 6,
-      "enabled": false,
-      "_retired": true,
-      "_comment": "roster sync 2026-09-11: retired - HTTP 410 Gone, model has reached end of life (verified live).",
+      "enabled": true,
+      "_comment": "roster sync 2026-11-12: re-enabled — back on the provider's catalog",
       "execution": {
         "context_length": 1000000,
         "max_output_tokens": 65536,
@@ -1116,6 +1115,70 @@
       "execution": {
         "context_length": 128000,
         "max_output_tokens": 32768,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "deepseek-ai/deepseek-v4.1-flash",
+      "priority": 80,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 1000000,
+        "max_output_tokens": 384000,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "deepseek",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "nvidia/nemotron-3.5-bolt-e4b",
+      "priority": 81,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 16384,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "nvidia",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "priority": 82,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 16384,
+        "supports_tools": true,
+        "supports_vision": true,
+        "family": "nvidia",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "stepfun-ai/step-5-preview",
+      "priority": 83,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
         "supports_tools": true,
         "supports_vision": false,
         "family": "api",

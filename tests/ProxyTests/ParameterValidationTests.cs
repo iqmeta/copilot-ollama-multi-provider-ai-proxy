@@ -575,18 +575,18 @@ public class ParameterValidationTests
 
     [Theory]
     [InlineData("deepseek", 3)]      // v4-pro + v4-flash + deepseek-flash (verified live 2026-09-10; coder-6.7b disabled)
-    [InlineData("google", 6)]        // -1 gemini-2.5-pro retired 2026-10-06 (HTTP 404 Not Found, verified live)
+    [InlineData("google", 7)]        // gemini-2.5-pro re-enabled upstream (roster sync 2026-11-12)
     [InlineData("openai", 4)]        // gpt-5.5, gpt-5.4, gpt-5.4-mini, o4-mini (gpt-5.5-pro is Responses-API only)
-    [InlineData("nvidia", 3)]        // -1 deepseek-ai/deepseek-v4-pro retired (not offered upstream / HTTP 404, verified live 2026-10-06)
+    [InlineData("nvidia", 4)]        // minimax-m3 re-enabled upstream (roster sync 2026-11-12)
     [InlineData("groq", 3)]          // -3 retired (qwen3.6-27b replaced by 3.8; compound & compound-mini HTTP 404, verified live 2026-10-06)
     [InlineData("openrouter", 10)]
     [InlineData("moonshot", 6)]      // 6 enabled (kimi-k2.5 disabled); v1-* kept: account 429s make them unverifiable
     [InlineData("cerebras", 1)]      // gpt-oss-120b only; zai-glm-4.7 retired 2026-09-11 (HTTP 404 archived, verified live)
-    [InlineData("ollama", 10)]       // -2 retired (HTTP 410 Gone: glm-5.1, deepseek-v4-flash); +1 gemma4:31b (HTTP 200 OK, verified live 2026-10-06)
+    [InlineData("ollama", 9)]        // nemotron-3-nano:30b retired upstream (roster sync 2026-11-12)
     [InlineData("mistral", 1)]       // codestral-latest enabled (verified live 2026-10-06 HTTP 200 OK)
     [InlineData("cloudflare", 3)]    // llama-3.3-70b, qwen2.5-coder-32b, llama-3.1-8b (verified live 2026-10-06 HTTP 200 OK)
     [InlineData("zenmux", 0)]        // whole roster disabled 2026-07-31: HTTP 402 reject_no_credit on every model
-    [InlineData("anthropic", 7)]        // 7 enabled: Sonnet (5.5, 5, 3.7, 3.5) and Haiku (5.5, 5, 3.5); Opus and Fable disabled
+    [InlineData("anthropic", 4)]        // 4 enabled: Sonnet (5.5, 5) and Haiku (5.5, 5); 3.x retired, Opus and Fable disabled
     public void EnabledModelCount_IsCorrect(string providerName, int expectedEnabled)
     {
         ModelSelectionStore store = new();

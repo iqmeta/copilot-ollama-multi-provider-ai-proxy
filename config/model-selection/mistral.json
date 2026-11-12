@@ -87,6 +87,166 @@
         "max_tokens": 8192,
         "timeout_seconds": 60
       }
+    },
+    {
+      "match": "codestral-2508",
+      "priority": 6,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 32768,
+        "max_output_tokens": 4096,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "mistralai",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "labs-leanstral-1-5",
+      "priority": 7,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "labs-leanstral-1-5-1",
+      "priority": 8,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "magistral-small-latest",
+      "priority": 9,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "ministral-14b-2512",
+      "priority": 10,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 32768,
+        "max_output_tokens": 4096,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "mistralai",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "ministral-14b-latest",
+      "priority": 11,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 32768,
+        "max_output_tokens": 4096,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "mistralai",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "ministral-3b-2512",
+      "priority": 12,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 32768,
+        "max_output_tokens": 4096,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "mistralai",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "ministral-3b-latest",
+      "priority": 13,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 32768,
+        "max_output_tokens": 4096,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "mistralai",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "ministral-8b-2512",
+      "priority": 14,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 32768,
+        "max_output_tokens": 4096,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "mistralai",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "ministral-8b-latest",
+      "priority": 15,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 32768,
+        "max_output_tokens": 4096,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "mistralai",
+        "timeout_seconds": 120
+      }
     }
   ]
 }

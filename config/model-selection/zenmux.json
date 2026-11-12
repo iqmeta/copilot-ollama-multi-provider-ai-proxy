@@ -2617,6 +2617,166 @@
         "family": "api",
         "timeout_seconds": 120
       }
+    },
+    {
+      "match": "anthropic/claude-haiku-5.5",
+      "priority": 164,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 1048576,
+        "max_output_tokens": 131072,
+        "supports_tools": true,
+        "supports_vision": true,
+        "family": "anthropic",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "atria-asi/atria-dawn",
+      "priority": 165,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "baidu/ernie-5.5-flash-preview",
+      "priority": 166,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "cloudflare/clef",
+      "priority": 167,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "cloudflare/clef-flash",
+      "priority": 168,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "cloudflare/clef-omni",
+      "priority": 169,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "google/gemini-4-argon",
+      "priority": 170,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "inclusionai/ling-3.1-flash",
+      "priority": 171,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "inclusionai/llada-image",
+      "priority": 172,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "inclusionai/llada-image-turbo",
+      "priority": 173,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
     }
   ]
 }

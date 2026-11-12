@@ -300,7 +300,7 @@ internal sealed class ModelSelectionStore
                         // Merge with existing entries for the same provider (multiple files may
                         // declare the same provider, e.g. ollama.json + ollamacloud.json both use
                         // "provider": "ollama"). Previously loaded entries are preserved.
-                        if (selections.TryGetValue(provider, out ModelSelectionEntry[] existing))
+                        if (selections.TryGetValue(provider, out ModelSelectionEntry[]? existing))
                         {
                             // On a duplicate match string, the more useful entry wins:
                             // enabled beats disabled, then lower priority beats higher.

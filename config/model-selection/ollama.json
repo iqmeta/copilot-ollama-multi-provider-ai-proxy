@@ -321,15 +321,112 @@
     {
       "match": "nemotron-3-nano:30b",
       "priority": 30,
-      "enabled": true,
+      "enabled": false,
       "_added": "2026-09-10",
-      "_comment": "verified live 2026-09-10 (200 OK); promoted from _auto to curated 2026-09-11 (3-miss retirement protection).",
+      "_comment": "roster sync 2026-11-12: retired — not offered for 4 consecutive checks (threshold 3)",
       "execution": {
         "context_length": 128000,
         "max_output_tokens": 16384,
         "supports_tools": true,
         "supports_vision": false,
         "family": "nvidia",
+        "timeout_seconds": 120
+      },
+      "_retired": true
+    },
+    {
+      "match": "beam",
+      "priority": 31,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "clef:27b",
+      "priority": 32,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "mimo-v2.6-flash",
+      "priority": 33,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "mimo-v2.6-pro",
+      "priority": 34,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "mistral-large-4",
+      "priority": 35,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 16384,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "mistralai",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "muse-spark-open",
+      "priority": 36,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
         "timeout_seconds": 120
       }
     }

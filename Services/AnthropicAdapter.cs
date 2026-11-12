@@ -14,6 +14,24 @@ internal static partial class AnthropicAdapter
     }
 
     /// <summary>
+    /// Determines whether the upstream Anthropic model supports sampling parameters (temperature, top_p, top_k).
+    /// Anthropic has deprecated temperature/top_p/top_k on reasoning and Claude 5.x/4.x models.
+    /// Only legacy Claude 3.x models accept temperature.
+    /// </summary>
+    internal static bool SupportsTemperature(string model)
+    {
+        if (string.IsNullOrWhiteSpace(model))
+            return false;
+
+        // Claude 3.x models (3.0, 3.5, 3.7) support traditional sampling parameters.
+        if (model.Contains("claude-3", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // All newer models (Claude 5.x, Claude 4.x, Fable, etc.) deprecate temperature.
+        return false;
+    }
+
+    /// <summary>
     /// Translates an OpenAI /v1/chat/completions JSON request body into an Anthropic /v1/messages JSON request body.
     /// Handles extraction of system messages to top-level "system", conversion of tools, multimodal image parsing,
     /// tool calls / tool results, and strict user/assistant message alternation.
@@ -267,8 +285,8 @@ internal static partial class AnthropicAdapter
             anthropicPayload["system"] = systemBuilder.ToString().Trim();
         }
 
-        // Anthropic deprecated temperature and top_p for reasoning models (e.g. Fable)
-        bool supportsTemperature = !upstreamModel.Contains("fable", StringComparison.OrdinalIgnoreCase);
+        // Anthropic deprecated temperature, top_p, and top_k for reasoning and newer models (Claude 5.x / 4.x / Fable)
+        bool supportsTemperature = SupportsTemperature(upstreamModel);
 
         if (supportsTemperature && root.TryGetProperty("temperature", out JsonElement tempEl) && tempEl.ValueKind == JsonValueKind.Number)
         {
@@ -280,7 +298,7 @@ internal static partial class AnthropicAdapter
             anthropicPayload["top_p"] = topPEl.GetDouble();
         }
 
-        if (root.TryGetProperty("top_k", out JsonElement topKEl) && topKEl.ValueKind == JsonValueKind.Number)
+        if (supportsTemperature && root.TryGetProperty("top_k", out JsonElement topKEl) && topKEl.ValueKind == JsonValueKind.Number)
         {
             anthropicPayload["top_k"] = topKEl.GetInt32();
         }

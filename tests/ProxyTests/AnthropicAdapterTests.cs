@@ -361,5 +361,51 @@ public sealed class AnthropicAdapterTests
         Assert.Equal(10, root.GetProperty("prompt_eval_count").GetInt64());
         Assert.Equal(15, root.GetProperty("eval_count").GetInt64());
     }
+
+    [Theory]
+    [InlineData("claude-3-5-sonnet-20241022", true)]
+    [InlineData("claude-3-5-haiku-latest", true)]
+    [InlineData("claude-3-7-sonnet-latest", true)]
+    [InlineData("claude-3-opus-latest", true)]
+    [InlineData("claude-sonnet-5-5", false)]
+    [InlineData("claude-haiku-5-5", false)]
+    [InlineData("claude-sonnet-5", false)]
+    [InlineData("claude-haiku-5", false)]
+    [InlineData("claude-opus-5-5", false)]
+    [InlineData("claude-fable-5-2", false)]
+    [InlineData("claude-fable-5", false)]
+    [InlineData("claude-haiku-4-5-20251001", false)]
+    [InlineData("claude-opus-4-7", false)]
+    public void SupportsTemperature_CorrectlyIdentifiesSupportedModels(string model, bool expected)
+    {
+        Assert.Equal(expected, AnthropicAdapter.SupportsTemperature(model));
+    }
+
+    [Fact]
+    public void BuildAnthropicMessagesRequest_Claude5AndFable_OmitsTemperatureAndTopPAndTopK()
+    {
+        string openAiJson = """
+        {
+          "model": "claude-sonnet-5-5",
+          "messages": [
+            { "role": "user", "content": "Hello Claude" }
+          ],
+          "max_tokens": 1024,
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "top_k": 40
+        }
+        """;
+
+        string result = AnthropicAdapter.BuildAnthropicMessagesRequest(openAiJson, "claude-sonnet-5-5", isStream: false);
+        using JsonDocument doc = JsonDocument.Parse(result);
+        JsonElement root = doc.RootElement;
+
+        Assert.Equal("claude-sonnet-5-5", root.GetProperty("model").GetString());
+        Assert.Equal(1024, root.GetProperty("max_tokens").GetInt32());
+        Assert.False(root.TryGetProperty("temperature", out _));
+        Assert.False(root.TryGetProperty("top_p", out _));
+        Assert.False(root.TryGetProperty("top_k", out _));
+    }
 }
 

@@ -105,7 +105,7 @@ public sealed class AnthropicIntegrationTests : IDisposable
     {
         string requestJson = """
         {
-          "model": "claude-3-5-sonnet-latest@anthropic",
+          "model": "claude-sonnet-5-5@anthropic",
           "messages": [
             { "role": "system", "content": "You are a helpful assistant." },
             { "role": "user", "content": "Hello!" }
@@ -141,7 +141,7 @@ public sealed class AnthropicIntegrationTests : IDisposable
     {
         string requestJson = """
         {
-          "model": "claude-3-5-sonnet-latest@anthropic",
+          "model": "claude-sonnet-5-5@anthropic",
           "messages": [
             { "role": "user", "content": "Stream to me" }
           ],
@@ -165,7 +165,7 @@ public sealed class AnthropicIntegrationTests : IDisposable
     {
         string requestJson = """
         {
-          "model": "claude-3-5-sonnet-latest@anthropic",
+          "model": "claude-sonnet-5-5@anthropic",
           "messages": [
             { "role": "user", "content": "Hello Ollama" }
           ],
@@ -194,7 +194,7 @@ public sealed class AnthropicIntegrationTests : IDisposable
     {
         string requestJson = """
         {
-          "model": "claude-3-5-sonnet-latest@anthropic",
+          "model": "claude-sonnet-5-5@anthropic",
           "messages": [
             { "role": "user", "content": "Stream to Ollama" }
           ],

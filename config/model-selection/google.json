@@ -91,9 +91,8 @@
     {
       "match": "models/gemini-2.5-pro",
       "priority": 6,
-      "enabled": false,
-      "_retired": true,
-      "_comment": "retired 2026-10-06: HTTP 404 Not Found (verified live). Google officially retired gemini-2.5-pro in favor of the gemini-3.x series.",
+      "enabled": true,
+      "_comment": "roster sync 2026-11-12: re-enabled — back on the provider's catalog",
       "execution": {
         "context_length": 2097152,
         "max_output_tokens": 65536,
@@ -708,6 +707,102 @@
       "_auto": true,
       "_added": "2026-09-15",
       "_comment": "roster sync 2026-09-15: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "models/antigravity-preview-latest",
+      "priority": 45,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "models/gemini-4-argon",
+      "priority": 46,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "models/gemini-4-carbon",
+      "priority": 47,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "models/gemini-decision-1",
+      "priority": 48,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "models/gemini-nano-banana-2.1",
+      "priority": 49,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "models/gemini-omni-1.2-flash",
+      "priority": 50,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
       "execution": {
         "context_length": 128000,
         "max_output_tokens": 8192,

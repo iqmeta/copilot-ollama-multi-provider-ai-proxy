@@ -331,6 +331,7 @@ public class ModelSelectionStoreTests
         ProviderRegistry registry = new(factory);
 
         ModelExecutionConfig config = store.GetExecutionConfigForModel("model-that-definitely-does-not-exist-12345", registry.ModelToProvider);
-        Assert.NotNull(config);
+        Assert.Null(config.Temperature);
+        Assert.Null(config.SupportsTemperature);
     }
 }

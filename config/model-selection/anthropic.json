@@ -12,7 +12,7 @@
         "supports_vision": true,
         "family": "anthropic",
         "max_tokens": 16384,
-        "temperature": 1.0,
+        "supports_temperature": false,
         "timeout_seconds": 180
       }
     },
@@ -27,7 +27,7 @@
         "supports_vision": true,
         "family": "anthropic",
         "max_tokens": 8192,
-        "temperature": 1.0,
+        "supports_temperature": false,
         "timeout_seconds": 90
       }
     },
@@ -43,7 +43,7 @@
         "supports_vision": true,
         "family": "anthropic",
         "max_tokens": 16384,
-        "temperature": 1.0,
+        "supports_temperature": false,
         "timeout_seconds": 180
       }
     },
@@ -59,14 +59,14 @@
         "supports_vision": true,
         "family": "anthropic",
         "max_tokens": 8192,
-        "temperature": 1.0,
+        "supports_temperature": false,
         "timeout_seconds": 90
       }
     },
     {
       "match": "claude-3-7-sonnet-latest",
       "priority": 5,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 200000,
         "max_output_tokens": 64000,
@@ -74,14 +74,15 @@
         "supports_vision": true,
         "family": "anthropic",
         "max_tokens": 8192,
-        "temperature": 1.0,
         "timeout_seconds": 180
-      }
+      },
+      "_retired": true,
+      "_comment": "roster sync 2026-11-12: retired — not offered for 4 consecutive checks (threshold 3)"
     },
     {
       "match": "claude-3-5-sonnet-latest",
       "priority": 6,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 200000,
         "max_output_tokens": 8192,
@@ -89,14 +90,15 @@
         "supports_vision": true,
         "family": "anthropic",
         "max_tokens": 8192,
-        "temperature": 1.0,
         "timeout_seconds": 120
-      }
+      },
+      "_retired": true,
+      "_comment": "roster sync 2026-11-12: retired — not offered for 4 consecutive checks (threshold 3)"
     },
     {
       "match": "claude-3-5-haiku-latest",
       "priority": 7,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 200000,
         "max_output_tokens": 8192,
@@ -104,9 +106,10 @@
         "supports_vision": true,
         "family": "anthropic",
         "max_tokens": 8192,
-        "temperature": 1.0,
         "timeout_seconds": 90
-      }
+      },
+      "_retired": true,
+      "_comment": "roster sync 2026-11-12: retired — not offered for 4 consecutive checks (threshold 3)"
     },
     {
       "match": "claude-opus-5-5",
@@ -120,7 +123,7 @@
         "supports_vision": true,
         "family": "anthropic",
         "max_tokens": 16384,
-        "temperature": 1.0,
+        "supports_temperature": false,
         "timeout_seconds": 240
       }
     },
@@ -137,7 +140,7 @@
         "supports_vision": true,
         "family": "anthropic",
         "max_tokens": 16384,
-        "temperature": 1.0,
+        "supports_temperature": false,
         "timeout_seconds": 240
       }
     },
@@ -153,7 +156,6 @@
         "supports_vision": true,
         "family": "anthropic",
         "max_tokens": 4096,
-        "temperature": 1.0,
         "timeout_seconds": 180
       }
     },
@@ -169,7 +171,7 @@
         "supports_vision": true,
         "family": "anthropic",
         "max_tokens": 16384,
-        "temperature": 1.0,
+        "supports_temperature": false,
         "timeout_seconds": 240
       }
     },
@@ -186,8 +188,120 @@
         "supports_vision": true,
         "family": "anthropic",
         "max_tokens": 16384,
-        "temperature": 1.0,
+        "supports_temperature": false,
         "timeout_seconds": 240
+      }
+    },
+    {
+      "match": "claude-haiku-4-5-20251001",
+      "priority": 13,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "claude-opus-4-5-20251101",
+      "priority": 14,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "claude-opus-4-6",
+      "priority": 15,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "claude-opus-4-7",
+      "priority": 16,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "claude-opus-4-8",
+      "priority": 17,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "claude-sonnet-4-5-20250929",
+      "priority": 18,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "claude-sonnet-4-6",
+      "priority": 19,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
       }
     }
   ]
