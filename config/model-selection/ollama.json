@@ -23,7 +23,7 @@
     {
       "match": "glm-5.2",
       "priority": 2,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 1000000,
         "max_output_tokens": 65536,
@@ -34,7 +34,8 @@
         "top_p": 0.9,
         "max_tokens": 16384,
         "timeout_seconds": 240
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by glm-5.3"
     },
     {
       "match": "deepseek-v4-pro",
@@ -74,7 +75,7 @@
     {
       "match": "minimax-m3",
       "priority": 5,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 1000000,
         "max_output_tokens": 65536,
@@ -85,12 +86,13 @@
         "top_p": 0.9,
         "max_tokens": 16384,
         "timeout_seconds": 240
-      }
+      },
+      "_comment": "Disabled 2026-11-12: retired/superseded"
     },
     {
       "match": "nemotron-3-ultra",
       "priority": 6,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 1000000,
         "max_output_tokens": 65536,
@@ -101,12 +103,13 @@
         "top_p": 0.9,
         "max_tokens": 16384,
         "timeout_seconds": 240
-      }
+      },
+      "_comment": "Disabled 2026-11-12: keep NIM direct only"
     },
     {
       "match": "nemotron-3-super",
       "priority": 7,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 1000000,
         "max_output_tokens": 65536,
@@ -117,7 +120,8 @@
         "top_p": 0.9,
         "max_tokens": 16384,
         "timeout_seconds": 240
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by nemotron 3.5 on NIM/OpenRouter"
     },
     {
       "match": "glm-5.1",
@@ -242,57 +246,59 @@
     {
       "match": "deepseek-v4.1-flash",
       "priority": 25,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-09-10",
-      "_comment": "roster sync 2026-09-10: auto-added, disabled until reviewed",
       "execution": {
         "context_length": 1000000,
         "max_output_tokens": 384000,
         "supports_tools": true,
         "supports_vision": false,
         "family": "deepseek",
-        "timeout_seconds": 120
-      }
+        "timeout_seconds": 120,
+        "max_tokens": 8192,
+        "temperature": 0.2
+      },
+      "_comment": "Promoted 2026-11-12: latest DeepSeek v4.1 Flash"
     },
     {
       "match": "glm-5.3",
       "priority": 26,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-09-10",
-      "_comment": "Ollama Cloud: model requires subscription or usage credits (verified live 2026-09-10). Enable once the plan covers it.",
       "execution": {
         "context_length": 128000,
         "max_output_tokens": 32768,
         "supports_tools": true,
         "supports_vision": false,
         "family": "api",
-        "timeout_seconds": 120
-      }
+        "timeout_seconds": 120,
+        "max_tokens": 8192,
+        "temperature": 0.2
+      },
+      "_comment": "Promoted 2026-11-12: latest GLM 5.3"
     },
     {
       "match": "glm-5.3-flash",
       "priority": 27,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-09-10",
-      "_comment": "Ollama Cloud: model requires subscription or usage credits (verified live 2026-09-10). Enable once the plan covers it.",
       "execution": {
         "context_length": 128000,
         "max_output_tokens": 32768,
         "supports_tools": true,
         "supports_vision": false,
         "family": "api",
-        "timeout_seconds": 120
-      }
+        "timeout_seconds": 120,
+        "max_tokens": 8192,
+        "temperature": 0.2
+      },
+      "_comment": "Promoted 2026-11-12: latest GLM 5.3 Flash"
     },
     {
       "match": "gpt-oss:20b",
       "priority": 28,
-      "enabled": true,
+      "enabled": false,
       "_added": "2026-09-10",
-      "_comment": "verified live 2026-09-10 (200 OK); promoted from _auto to curated 2026-09-11 (3-miss retirement protection).",
       "execution": {
         "context_length": 128000,
         "max_output_tokens": 16384,
@@ -300,7 +306,8 @@
         "supports_vision": false,
         "family": "openai",
         "timeout_seconds": 120
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by gpt-oss:120b"
     },
     {
       "match": "minimax-m2.7",
@@ -385,34 +392,36 @@
     {
       "match": "mimo-v2.6-pro",
       "priority": 34,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-11-12",
-      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
       "execution": {
         "context_length": 128000,
         "max_output_tokens": 8192,
         "supports_tools": true,
         "supports_vision": false,
         "family": "api",
-        "timeout_seconds": 120
-      }
+        "timeout_seconds": 120,
+        "max_tokens": 8192,
+        "temperature": 0.2
+      },
+      "_comment": "Promoted 2026-11-12: latest MiMo v2.6 Pro"
     },
     {
       "match": "mistral-large-4",
       "priority": 35,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-11-12",
-      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
       "execution": {
         "context_length": 128000,
         "max_output_tokens": 16384,
         "supports_tools": true,
         "supports_vision": false,
         "family": "mistralai",
-        "timeout_seconds": 120
-      }
+        "timeout_seconds": 120,
+        "max_tokens": 8192,
+        "temperature": 0.2
+      },
+      "_comment": "Promoted 2026-11-12: latest Mistral Large 4"
     },
     {
       "match": "muse-spark-open",

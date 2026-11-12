@@ -325,7 +325,7 @@ public class ModelSelectionTests
         // deepseek-ai/deepseek-v4-pro was retired 2026-09-14 (not offered upstream), replaced by nemotron-3-ultra-550b-a55b.
         ModelSelectionEntry[] enabled = selections["nvidia"].Where(e => e.Enabled).ToArray();
         Assert.True(enabled.Length >= 3, $"Expected >= 3 enabled NVIDIA models, got {enabled.Length}");
-        Assert.Contains(enabled, e => e.Match == "nvidia/nemotron-3-super-120b-a12b");
+        Assert.Contains(enabled, e => e.Match == "nvidia/nemotron-3.5-super-vl-120b-a12b");
         Assert.Contains(enabled, e => e.Match == "openai/gpt-oss-20b");
         Assert.Contains(enabled, e => e.Match == "nvidia/nemotron-3-ultra-550b-a55b");
     }

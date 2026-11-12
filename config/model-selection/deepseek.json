@@ -37,9 +37,7 @@
     {
       "match": "deepseek-v4-flash",
       "priority": 3,
-      "enabled": true,
-      "_keep_enabled": true,
-      "_comment": "NOT listed in /v1/models since 2026-09-10 (219+ misses) but answers real requests - verified live 2026-09-11. Catalog absence is not a verdict; do not retire.",
+      "enabled": false,
       "execution": {
         "context_length": 1048576,
         "max_output_tokens": 131072,
@@ -50,7 +48,8 @@
         "max_tokens": 4096,
         "reasoning_effort": "medium",
         "timeout_seconds": 90
-      }
+      },
+      "_comment": "Disabled 2026-11-12: alias superseded by deepseek-flash (not in /v1/models)"
     },
     {
       "match": "deepseek-flash",
@@ -64,7 +63,9 @@
         "supports_tools": true,
         "supports_vision": false,
         "family": "deepseek",
-        "timeout_seconds": 120
+        "timeout_seconds": 120,
+        "max_tokens": 8192,
+        "temperature": 0.2
       }
     }
   ]

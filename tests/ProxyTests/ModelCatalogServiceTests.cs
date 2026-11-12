@@ -98,12 +98,12 @@ public class ModelCatalogServiceTests : IDisposable
     public async Task Openai_OnlyProvider_ClaimsBareName()
     {
         (ModelCatalogService catalog, ProviderRegistry registry, _) =
-            BuildCatalog(new Dictionary<string, string[]> { ["openai"] = ["gpt-5.4"] });
+            BuildCatalog(new Dictionary<string, string[]> { ["openai"] = ["gpt-5.5"] });
 
         await catalog.RefreshAvailableModels(CancellationToken.None);
 
-        Assert.Equal("openai", registry.ResolveProvider("gpt-5.4").Name);
-        Assert.Equal("openai", registry.ModelToProvider["gpt-5.4@openai"].Name);
+        Assert.Equal("openai", registry.ResolveProvider("gpt-5.5").Name);
+        Assert.Equal("openai", registry.ModelToProvider["gpt-5.5@openai"].Name);
     }
 
     [Fact]
@@ -143,26 +143,26 @@ public class ModelCatalogServiceTests : IDisposable
     public async Task Moonshot_OnlyProvider_ClaimsBareName()
     {
         (ModelCatalogService catalog, ProviderRegistry registry, _) =
-            BuildCatalog(new Dictionary<string, string[]> { ["moonshot"] = ["kimi-k2.6"] });
+            BuildCatalog(new Dictionary<string, string[]> { ["moonshot"] = ["kimi-k3"] });
 
         await catalog.RefreshAvailableModels(CancellationToken.None);
 
-        Assert.Equal("moonshot", registry.ResolveProvider("kimi-k2.6").Name);
-        Assert.Equal("moonshot", registry.ModelToProvider["kimi-k2.6@moonshot"].Name);
+        Assert.Equal("moonshot", registry.ResolveProvider("kimi-k3").Name);
+        Assert.Equal("moonshot", registry.ModelToProvider["kimi-k3@moonshot"].Name);
     }
 
     [Fact]
     public async Task Google_OnlyProvider_ClaimsBareName()
     {
         (ModelCatalogService catalog, ProviderRegistry registry, _) =
-            BuildCatalog(new Dictionary<string, string[]> { ["google"] = ["models/gemini-2.5-flash"] });
+            BuildCatalog(new Dictionary<string, string[]> { ["google"] = ["models/gemini-4-hydrogen"] });
 
         await catalog.RefreshAvailableModels(CancellationToken.None);
 
-        Assert.Equal("google", registry.ResolveProvider("models/gemini-2.5-flash").Name);
-        Assert.Equal("google", registry.ModelToProvider["models/gemini-2.5-flash"].Name);
-        Assert.Equal("google", registry.ModelToProvider["models/gemini-2.5-flash@google"].Name);
-        Assert.Contains("models/gemini-2.5-flash", catalog.AvailableModels);
+        Assert.Equal("google", registry.ResolveProvider("models/gemini-4-hydrogen").Name);
+        Assert.Equal("google", registry.ModelToProvider["models/gemini-4-hydrogen"].Name);
+        Assert.Equal("google", registry.ModelToProvider["models/gemini-4-hydrogen@google"].Name);
+        Assert.Contains("models/gemini-4-hydrogen", catalog.AvailableModels);
     }
 
     [Fact]
@@ -410,7 +410,7 @@ public class ModelCatalogServiceTests : IDisposable
                 {
                     ["nvidia"] = ["openai/gpt-oss-20b"],
                     ["groq"] = ["openai/gpt-oss-20b"],
-                    ["ollama"] = ["gpt-oss:20b"],
+                    ["ollama"] = ["gpt-oss:120b"],
                 },
                 ollamaProviders: ["ollama"]);
 

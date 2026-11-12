@@ -5,7 +5,7 @@
       "match": "anthropic/claude-sonnet-4.6",
       "upstream": "anthropic/claude-sonnet-4.6",
       "priority": 1,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 1000000,
         "max_output_tokens": 65536,
@@ -15,13 +15,14 @@
         "temperature": 0.2,
         "max_tokens": 8192,
         "timeout_seconds": 180
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by anthropic/claude-sonnet-5"
     },
     {
       "match": "openai/gpt-5.4",
       "upstream": "openai/gpt-5.4",
       "priority": 2,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 400000,
         "max_output_tokens": 65536,
@@ -31,13 +32,14 @@
         "temperature": 0.2,
         "max_tokens": 8192,
         "timeout_seconds": 180
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by openai/gpt-6.1-terra / gpt-6-astra"
     },
     {
       "match": "google/gemini-3.5-flash",
       "upstream": "google/gemini-3.5-flash",
       "priority": 3,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 1048576,
         "max_output_tokens": 65536,
@@ -47,7 +49,8 @@
         "temperature": 0.2,
         "max_tokens": 8192,
         "timeout_seconds": 120
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by google/gemini-4-hydrogen / gemini-3.8-flash"
     },
     {
       "match": "deepseek/deepseek-v4-pro",
@@ -69,7 +72,7 @@
       "match": "qwen/qwen3.7-plus",
       "upstream": "qwen/qwen3.7-plus",
       "priority": 5,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 1000000,
         "max_output_tokens": 65536,
@@ -79,7 +82,8 @@
         "temperature": 0.15,
         "max_tokens": 8192,
         "timeout_seconds": 180
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by qwen/qwen3.8-max"
     },
     {
       "match": "qwen/qwen3-coder",
@@ -117,7 +121,7 @@
       "match": "x-ai/grok-4.3",
       "upstream": "x-ai/grok-4.3",
       "priority": 8,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 1000000,
         "max_output_tokens": 65536,
@@ -127,13 +131,14 @@
         "temperature": 0.2,
         "max_tokens": 8192,
         "timeout_seconds": 180
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by x-ai/grok-4.7"
     },
     {
       "match": "moonshotai/kimi-k2.6",
       "upstream": "moonshotai/kimi-k2.6",
       "priority": 9,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 262144,
         "max_output_tokens": 262144,
@@ -143,13 +148,14 @@
         "temperature": 1.0,
         "max_tokens": 4096,
         "timeout_seconds": 120
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by moonshotai/kimi-k3 / kimi-k2.7-code"
     },
     {
       "match": "nvidia/nemotron-3-super-120b-a12b",
       "upstream": "nvidia/nemotron-3-super-120b-a12b",
       "priority": 10,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 1000000,
         "max_output_tokens": 16384,
@@ -159,7 +165,8 @@
         "temperature": 0.2,
         "max_tokens": 8192,
         "timeout_seconds": 180
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by nvidia/nemotron-3.5-super-vl"
     },
     {
       "match": "aion-labs/aion-2.0",
@@ -564,17 +571,16 @@
     {
       "match": "anthropic/claude-sonnet-5",
       "priority": 36,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-09-11",
-      "_comment": "roster sync 2026-09-11: auto-added, disabled until reviewed",
+      "_comment": "promoted 2026-11-12: latest generation verified",
       "execution": {
-        "context_length": 128000,
-        "max_output_tokens": 8192,
         "supports_tools": true,
-        "supports_vision": false,
-        "family": "api",
-        "timeout_seconds": 120
+        "timeout_seconds": 120,
+        "max_output_tokens": 131072,
+        "supports_vision": true,
+        "family": "anthropic",
+        "context_length": 1048576
       }
     },
     {
@@ -1044,17 +1050,16 @@
     {
       "match": "deepseek/deepseek-v4.1-flash",
       "priority": 66,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-09-11",
-      "_comment": "roster sync 2026-09-11: auto-added, disabled until reviewed",
+      "_comment": "promoted 2026-11-12: latest generation verified",
       "execution": {
-        "context_length": 1000000,
-        "max_output_tokens": 384000,
         "supports_tools": true,
+        "timeout_seconds": 120,
+        "max_output_tokens": 131072,
         "supports_vision": false,
         "family": "deepseek",
-        "timeout_seconds": 120
+        "context_length": 1048576
       }
     },
     {
@@ -1444,17 +1449,16 @@
     {
       "match": "google/gemini-3.8-flash",
       "priority": 91,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-09-14",
-      "_comment": "roster sync 2026-09-14: auto-added, disabled until reviewed",
+      "_comment": "promoted 2026-11-12: latest generation verified",
       "execution": {
-        "context_length": 128000,
-        "max_output_tokens": 8192,
         "supports_tools": true,
-        "supports_vision": false,
-        "family": "api",
-        "timeout_seconds": 120
+        "timeout_seconds": 120,
+        "max_output_tokens": 65536,
+        "supports_vision": true,
+        "family": "google",
+        "context_length": 1048576
       }
     },
     {
@@ -2692,17 +2696,16 @@
     {
       "match": "moonshotai/kimi-k3",
       "priority": 169,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-09-14",
-      "_comment": "roster sync 2026-09-14: auto-added, disabled until reviewed",
+      "_comment": "promoted 2026-11-12: latest generation verified",
       "execution": {
-        "context_length": 128000,
-        "max_output_tokens": 8192,
         "supports_tools": true,
-        "supports_vision": false,
-        "family": "api",
-        "timeout_seconds": 120
+        "timeout_seconds": 120,
+        "max_output_tokens": 131072,
+        "supports_vision": true,
+        "family": "moonshotai",
+        "context_length": 262144
       }
     },
     {
@@ -3204,17 +3207,16 @@
     {
       "match": "openai/gpt-6-astra",
       "priority": 201,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-09-15",
-      "_comment": "roster sync 2026-09-15: auto-added, disabled until reviewed",
+      "_comment": "promoted 2026-11-12: latest generation verified",
       "execution": {
-        "context_length": 128000,
-        "max_output_tokens": 8192,
         "supports_tools": true,
-        "supports_vision": false,
-        "family": "api",
-        "timeout_seconds": 120
+        "timeout_seconds": 120,
+        "max_output_tokens": 128000,
+        "supports_vision": true,
+        "family": "openai",
+        "context_length": 400000
       }
     },
     {
@@ -4436,17 +4438,16 @@
     {
       "match": "qwen/qwen3.8-27b",
       "priority": 278,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-09-15",
-      "_comment": "roster sync 2026-09-15: auto-added, disabled until reviewed",
+      "_comment": "promoted 2026-11-12: latest generation verified",
       "execution": {
-        "context_length": 128000,
-        "max_output_tokens": 8192,
         "supports_tools": true,
+        "timeout_seconds": 120,
+        "max_output_tokens": 32768,
         "supports_vision": false,
         "family": "qwen",
-        "timeout_seconds": 120
+        "context_length": 262144
       }
     },
     {
@@ -5044,10 +5045,8 @@
     {
       "match": "x-ai/grok-4.6",
       "priority": 316,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-09-16",
-      "_comment": "roster sync 2026-09-16: auto-added, disabled until reviewed",
       "execution": {
         "context_length": 128000,
         "max_output_tokens": 8192,
@@ -5055,7 +5054,8 @@
         "supports_vision": false,
         "family": "api",
         "timeout_seconds": 120
-      }
+      },
+      "_comment": "Promoted 2026-11-12: latest verified live (HTTP 200 OK)"
     },
     {
       "match": "x-ai/grok-build-0.1",
@@ -5236,10 +5236,8 @@
     {
       "match": "z-ai/glm-5.2",
       "priority": 328,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-09-16",
-      "_comment": "roster sync 2026-09-16: auto-added, disabled until reviewed",
       "execution": {
         "context_length": 1000000,
         "max_output_tokens": 65536,
@@ -5247,7 +5245,8 @@
         "supports_vision": false,
         "family": "glm",
         "timeout_seconds": 120
-      }
+      },
+      "_comment": "Promoted 2026-11-12: latest verified live (HTTP 200 OK)"
     },
     {
       "match": "z-ai/glm-5.2:batch",
@@ -5620,17 +5619,16 @@
     {
       "match": "anthropic/claude-haiku-5.5",
       "priority": 352,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-11-12",
-      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "_comment": "promoted 2026-11-12: latest generation verified",
       "execution": {
-        "context_length": 1048576,
-        "max_output_tokens": 131072,
         "supports_tools": true,
+        "timeout_seconds": 120,
+        "max_output_tokens": 131072,
         "supports_vision": true,
         "family": "anthropic",
-        "timeout_seconds": 120
+        "context_length": 1048576
       }
     },
     {
@@ -5744,6 +5742,642 @@
         "family": "api",
         "timeout_seconds": 120
       }
+    },
+    {
+      "match": "google/gemini-4-carbon",
+      "priority": 360,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "google/gemini-4-carbon:batch",
+      "priority": 361,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "google/gemini-nano-banana-2.1",
+      "priority": 362,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "google/gemini-omni-1.1-flash",
+      "priority": 363,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "google/gemini-omni-1.2-flash",
+      "priority": 364,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "inclusionai/ling-3.0-tiny",
+      "priority": 365,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "inclusionai/ling-3.1-flash",
+      "priority": 366,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "kt/midm-k-3.0-pro",
+      "priority": 367,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "liquid/lfm-2.5-24b-a2b",
+      "priority": 368,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "liquid/lfm-3-1.7b",
+      "priority": 369,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "meta/muse-ember",
+      "priority": 370,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "meta/muse-spark-open",
+      "priority": 371,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "meta/muse-wonder",
+      "priority": 372,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "moondream/moondream3-preview",
+      "priority": 373,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "moondream/moondream3.1-9b-a2b",
+      "priority": 374,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "motif-technologies/motif-3",
+      "priority": 375,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "nex-agi/nex-n2.5-mini",
+      "priority": 376,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "nex-agi/nex-n2.5-pro",
+      "priority": 377,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "nex-agi/nex-n2.6",
+      "priority": 378,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "nvidia/nemotron-3.5-super-vl",
+      "priority": 379,
+      "enabled": true,
+      "_added": "2026-11-12",
+      "_comment": "promoted 2026-11-12: latest generation verified",
+      "execution": {
+        "supports_tools": true,
+        "timeout_seconds": 120,
+        "max_output_tokens": 65536,
+        "supports_vision": true,
+        "family": "nvidia",
+        "context_length": 262144
+      }
+    },
+    {
+      "match": "nvidia/switchyard",
+      "priority": 380,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "openai/gpt-6-luna",
+      "priority": 381,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "openai/gpt-6-luna-pro",
+      "priority": 382,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "openai/gpt-6-luna-pro:batch",
+      "priority": 383,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "openai/gpt-6-luna:batch",
+      "priority": 384,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "openai/gpt-6-sol",
+      "priority": 385,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "openai/gpt-6-sol-pro",
+      "priority": 386,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "openai/gpt-6-sol-pro:batch",
+      "priority": 387,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "openai/gpt-6-sol:batch",
+      "priority": 388,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "openai/gpt-6.1-sol",
+      "priority": 389,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "google/gemini-4-hydrogen",
+      "priority": 390,
+      "enabled": true,
+      "_added": "2026-11-12",
+      "_comment": "promoted 2026-11-12: latest generation verified",
+      "execution": {
+        "supports_tools": true,
+        "timeout_seconds": 120,
+        "max_output_tokens": 65536,
+        "supports_vision": true,
+        "family": "google",
+        "context_length": 1048576
+      }
+    },
+    {
+      "match": "google/gemini-4-hydrogen:batch",
+      "priority": 391,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "openai/gpt-6.1-terra",
+      "priority": 392,
+      "enabled": true,
+      "_added": "2026-11-12",
+      "_comment": "promoted 2026-11-12: latest generation verified",
+      "execution": {
+        "supports_tools": true,
+        "timeout_seconds": 120,
+        "max_output_tokens": 128000,
+        "supports_vision": true,
+        "family": "openai",
+        "context_length": 400000
+      }
+    },
+    {
+      "match": "openai/gpt-6.1-terra-pro",
+      "priority": 393,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "openai/gpt-6.1-terra-pro:batch",
+      "priority": 394,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "openai/gpt-6.1-terra:batch",
+      "priority": 395,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "particle-ai/particle-1",
+      "priority": 396,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "prism-ml/ternary-bonsai-2-27b",
+      "priority": 397,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "prism-ml/ternary-bonsai-2-9b",
+      "priority": 398,
+      "enabled": false,
+      "_auto": true,
+      "_added": "2026-11-12",
+      "_comment": "roster sync 2026-11-12: auto-added, disabled until reviewed",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "api",
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "match": "qwen/qwen3.8-max-prime",
+      "priority": 399,
+      "enabled": true,
+      "_added": "2026-11-12",
+      "execution": {
+        "context_length": 128000,
+        "max_output_tokens": 8192,
+        "supports_tools": true,
+        "supports_vision": false,
+        "family": "qwen",
+        "timeout_seconds": 120
+      },
+      "_comment": "Promoted 2026-11-12: latest verified live (HTTP 200 OK)"
     }
   ]
 }

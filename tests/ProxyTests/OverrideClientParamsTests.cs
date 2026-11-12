@@ -19,7 +19,7 @@ public class OverrideClientParamsTests
         RequestTransformer sut = CreateTransformer();
         string raw = """{"messages":[],"temperature":0.7}""";
 
-        string result = sut.ApplyExecutionDefaults(raw, "kimi-k2.6", ProviderCapabilitiesRegistry.Get("moonshot"));
+        string result = sut.ApplyExecutionDefaults(raw, "kimi-k2.7-code", ProviderCapabilitiesRegistry.Get("moonshot"));
 
         using JsonDocument doc = JsonDocument.Parse(result);
         Assert.Equal(1.0, doc.RootElement.GetProperty("temperature").GetDouble());
@@ -31,7 +31,7 @@ public class OverrideClientParamsTests
         RequestTransformer sut = CreateTransformer();
         string raw = """{"messages":[],"max_tokens":32000}""";
 
-        string result = sut.ApplyExecutionDefaults(raw, "kimi-k2.6", ProviderCapabilitiesRegistry.Get("moonshot"));
+        string result = sut.ApplyExecutionDefaults(raw, "kimi-k2.7-code", ProviderCapabilitiesRegistry.Get("moonshot"));
 
         using JsonDocument doc = JsonDocument.Parse(result);
         // kimi-k2.6's configured max_tokens is 8192
@@ -44,7 +44,7 @@ public class OverrideClientParamsTests
         RequestTransformer sut = CreateTransformer();
         string raw = """{"messages":[],"top_p":0.5}""";
 
-        string result = sut.ApplyExecutionDefaults(raw, "kimi-k2.6", ProviderCapabilitiesRegistry.Get("moonshot"));
+        string result = sut.ApplyExecutionDefaults(raw, "kimi-k2.7-code", ProviderCapabilitiesRegistry.Get("moonshot"));
 
         using JsonDocument doc = JsonDocument.Parse(result);
         // kimi-k2.6's configured top_p is 0.95
@@ -54,12 +54,12 @@ public class OverrideClientParamsTests
     [Fact]
     public void ApplyExecutionDefaults_OverrideClientParamsFalse_KeepsClientValue()
     {
-        // moonshot-v1-128k has override_client_params absent (defaults to false) — the proxy
+        // deepseek-v4-pro has override_client_params absent (defaults to false) — the proxy
         // must NOT overwrite a client-supplied temperature.
         RequestTransformer sut = CreateTransformer();
         string raw = """{"messages":[],"temperature":0.7,"max_tokens":1234}""";
 
-        string result = sut.ApplyExecutionDefaults(raw, "moonshot-v1-128k", ProviderCapabilitiesRegistry.Get("moonshot"));
+        string result = sut.ApplyExecutionDefaults(raw, "deepseek-v4-pro", ProviderCapabilitiesRegistry.Get("deepseek"));
 
         using JsonDocument doc = JsonDocument.Parse(result);
         Assert.Equal(0.7, doc.RootElement.GetProperty("temperature").GetDouble());
@@ -69,16 +69,16 @@ public class OverrideClientParamsTests
     [Fact]
     public void ApplyExecutionDefaults_OverrideClientParamsFalse_InjectsMissingDefaults()
     {
-        // Same model (moonshot-v1-128k) but with no temperature/max_tokens in the body — the
+        // Same model (deepseek-v4-pro) but with no temperature/max_tokens in the body — the
         // proxy must inject the configured defaults since override mode is off.
         RequestTransformer sut = CreateTransformer();
         string raw = """{"messages":[]}""";
 
-        string result = sut.ApplyExecutionDefaults(raw, "moonshot-v1-128k", ProviderCapabilitiesRegistry.Get("moonshot"));
+        string result = sut.ApplyExecutionDefaults(raw, "deepseek-v4-pro", ProviderCapabilitiesRegistry.Get("deepseek"));
 
         using JsonDocument doc = JsonDocument.Parse(result);
-        Assert.Equal(0.3, doc.RootElement.GetProperty("temperature").GetDouble());
-        Assert.Equal(4096, doc.RootElement.GetProperty("max_tokens").GetInt32());
+        Assert.Equal(0.2, doc.RootElement.GetProperty("temperature").GetDouble());
+        Assert.Equal(8192, doc.RootElement.GetProperty("max_tokens").GetInt32());
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class OverrideClientParamsTests
             }
             """;
 
-        string result = sut.ApplyExecutionDefaults(raw, "kimi-k2.6", ProviderCapabilitiesRegistry.Get("moonshot"));
+        string result = sut.ApplyExecutionDefaults(raw, "kimi-k2.7-code", ProviderCapabilitiesRegistry.Get("moonshot"));
 
         using JsonDocument doc = JsonDocument.Parse(result);
         Assert.Equal(1.0, doc.RootElement.GetProperty("temperature").GetDouble());

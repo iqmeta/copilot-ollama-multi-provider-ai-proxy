@@ -35,7 +35,7 @@
       "match": "claude-sonnet-5",
       "upstream": "claude-sonnet-5-5",
       "priority": 3,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 1048576,
         "max_output_tokens": 131072,
@@ -45,13 +45,14 @@
         "max_tokens": 16384,
         "supports_temperature": false,
         "timeout_seconds": 180
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by claude-sonnet-5-5"
     },
     {
       "match": "claude-haiku-5",
       "upstream": "claude-haiku-5-5",
       "priority": 4,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 1048576,
         "max_output_tokens": 131072,
@@ -61,7 +62,8 @@
         "max_tokens": 8192,
         "supports_temperature": false,
         "timeout_seconds": 90
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by claude-haiku-5-5"
     },
     {
       "match": "claude-3-7-sonnet-latest",

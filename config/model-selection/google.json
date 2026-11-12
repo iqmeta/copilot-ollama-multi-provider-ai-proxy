@@ -21,7 +21,7 @@
     {
       "match": "models/gemini-3.1-pro-preview",
       "priority": 2,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 2097152,
         "max_output_tokens": 65536,
@@ -33,7 +33,8 @@
         "max_tokens": 8192,
         "reasoning_effort": "high",
         "timeout_seconds": 180
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by gemini-4-hydrogen (and 429 on free tier)"
     },
     {
       "match": "models/gemini-3-pro-preview",
@@ -57,7 +58,7 @@
     {
       "match": "models/gemini-3-flash-preview",
       "priority": 4,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 1048576,
         "max_output_tokens": 65536,
@@ -69,7 +70,8 @@
         "max_tokens": 8192,
         "reasoning_effort": "medium",
         "timeout_seconds": 120
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by 3.5/3.8 Flash"
     },
     {
       "match": "models/gemini-3.1-flash-lite",
@@ -91,8 +93,7 @@
     {
       "match": "models/gemini-2.5-pro",
       "priority": 6,
-      "enabled": true,
-      "_comment": "roster sync 2026-11-12: re-enabled — back on the provider's catalog",
+      "enabled": false,
       "execution": {
         "context_length": 2097152,
         "max_output_tokens": 65536,
@@ -104,12 +105,13 @@
         "max_tokens": 8192,
         "reasoning_effort": "high",
         "timeout_seconds": 180
-      }
+      },
+      "_comment": "Disabled 2026-11-12: legacy 2.5 superseded by Gemini 4"
     },
     {
       "match": "models/gemini-2.5-flash",
       "priority": 7,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 1048576,
         "max_output_tokens": 65536,
@@ -121,12 +123,13 @@
         "max_tokens": 8192,
         "reasoning_effort": "medium",
         "timeout_seconds": 120
-      }
+      },
+      "_comment": "Disabled 2026-11-12: legacy 2.5 superseded by 3.8/3.5 Flash"
     },
     {
       "match": "models/gemini-2.5-flash-lite",
       "priority": 8,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 1048576,
         "max_output_tokens": 65536,
@@ -138,7 +141,8 @@
         "max_tokens": 8192,
         "reasoning_effort": "low",
         "timeout_seconds": 90
-      }
+      },
+      "_comment": "Disabled 2026-11-12: legacy 2.5 superseded by 3.1-flash-lite"
     },
     {
       "match": "models/antigravity-preview-05-2026",
@@ -399,18 +403,17 @@
     {
       "match": "models/gemini-3.8-flash",
       "priority": 25,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-09-11",
-      "_comment": "roster sync 2026-09-11: auto-added, disabled until reviewed",
       "execution": {
-        "context_length": 128000,
-        "max_output_tokens": 8192,
         "supports_tools": true,
-        "supports_vision": false,
-        "family": "api",
-        "timeout_seconds": 120
-      }
+        "timeout_seconds": 120,
+        "max_output_tokens": 65536,
+        "supports_vision": true,
+        "family": "google-gemini",
+        "context_length": 1048576
+      },
+      "_comment": "Promoted 2026-11-12: latest Gemini 3.8 Flash"
     },
     {
       "match": "models/gemini-flash-latest",
@@ -811,6 +814,21 @@
         "family": "api",
         "timeout_seconds": 120
       }
+    },
+    {
+      "match": "models/gemini-4-hydrogen",
+      "priority": 51,
+      "enabled": true,
+      "_added": "2026-11-12",
+      "execution": {
+        "supports_tools": true,
+        "timeout_seconds": 120,
+        "max_output_tokens": 65536,
+        "supports_vision": true,
+        "family": "google-gemini",
+        "context_length": 1048576
+      },
+      "_comment": "Promoted 2026-11-12: latest Gemini 4 verified live (HTTP 200 OK)"
     }
   ]
 }

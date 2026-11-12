@@ -39,7 +39,7 @@
     {
       "match": "gpt-5.4",
       "priority": 3,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 400000,
         "max_output_tokens": 65536,
@@ -50,7 +50,8 @@
         "timeout_seconds": 120,
         "uses_max_completion_tokens": true,
         "supports_temperature": false
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by gpt-5.5"
     },
     {
       "match": "gpt-5.4-mini",

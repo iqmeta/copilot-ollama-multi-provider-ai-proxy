@@ -103,12 +103,12 @@ public class RoutingDiagnosticTests : IDisposable
             BuildCatalog(new Dictionary<string, string[]>
             {
                 ["deepseek"] = ["deepseek-v4-pro"],
-                ["ollama"] = ["glm-5.2"],
+                ["ollama"] = ["glm-5.3"],
             });
 
         await catalog.RefreshAvailableModels(CancellationToken.None);
 
-        ProviderInfo provider = registry.ResolveProvider("glm-5.2");
+        ProviderInfo provider = registry.ResolveProvider("glm-5.3");
         Assert.Equal("ollama", provider.Name);
     }
 
@@ -202,12 +202,12 @@ public class RoutingDiagnosticTests : IDisposable
             BuildCatalog(new Dictionary<string, string[]>
             {
                 ["deepseek"] = ["deepseek-v4-pro"],
-                ["ollama"] = ["nemotron-3-ultra"],
+                ["ollama"] = ["mimo-v2.6-pro"],
             });
 
         await catalog.RefreshAvailableModels(CancellationToken.None);
 
-        ProviderInfo provider = registry.ResolveProvider("nemotron-3-ultra");
+        ProviderInfo provider = registry.ResolveProvider("mimo-v2.6-pro");
         Assert.Equal("ollama", provider.Name);
     }
 
@@ -285,7 +285,7 @@ public class RoutingDiagnosticTests : IDisposable
         (ModelCatalogService catalog, ProviderRegistry registry, _) =
             BuildCatalog(new Dictionary<string, string[]>
             {
-                ["ollama"] = ["deepseek-v4-pro", "kimi-k2.7-code", "gpt-oss:120b", "glm-5.2"],
+                ["ollama"] = ["deepseek-v4-pro", "kimi-k2.7-code", "gpt-oss:120b", "glm-5.3"],
             },
             ollamaProviders: ["ollama"]);
 
@@ -295,7 +295,7 @@ public class RoutingDiagnosticTests : IDisposable
         Assert.Equal("ollama", registry.ResolveProvider("deepseek-v4-pro").Name);
         Assert.Equal("ollama", registry.ResolveProvider("kimi-k2.7-code").Name);
         Assert.Equal("ollama", registry.ResolveProvider("gpt-oss:120b").Name);
-        Assert.Equal("ollama", registry.ResolveProvider("glm-5.2").Name);
+        Assert.Equal("ollama", registry.ResolveProvider("glm-5.3").Name);
     }
 
     // ──────────────────────────────────────────────────────────────────────

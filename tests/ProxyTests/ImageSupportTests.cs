@@ -451,8 +451,8 @@ public class ImageSupportTests
     [Fact]
     public void ModelSelectionStore_Moonshot_KimiK26_HasVision()
     {
-        // kimi-k2.6 en moonshot.json tiene supports_vision: true
-        ModelSelectionEntry? entry = _store.FindModelSelectionEntry("kimi-k2.6", "moonshot");
+        // kimi-k2.7-code en moonshot.json tiene supports_vision: true
+        ModelSelectionEntry? entry = _store.FindModelSelectionEntry("kimi-k2.7-code", "moonshot");
 
         Assert.NotNull(entry);
         Assert.True(entry.Value.Enabled);
@@ -462,8 +462,8 @@ public class ImageSupportTests
     [Fact]
     public void ModelSelectionStore_Moonshot_V1_128k_HasVision()
     {
-        // moonshot-v1-128k en moonshot.json tiene supports_vision: true
-        ModelSelectionEntry? entry = _store.FindModelSelectionEntry("moonshot-v1-128k", "moonshot");
+        // kimi-k3 en moonshot.json tiene supports_vision: true
+        ModelSelectionEntry? entry = _store.FindModelSelectionEntry("kimi-k3", "moonshot");
 
         Assert.NotNull(entry);
         Assert.True(entry.Value.Enabled);
@@ -497,11 +497,11 @@ public class ImageSupportTests
     [Fact]
     public void GetModelProfile_MoonshotV1128k_HasVisionCapability()
     {
-        // moonshot-v1-128k tiene supports_vision: true en moonshot.json
-        ModelExecutionConfig config = _store.GetExecutionConfigForModel("moonshot-v1-128k",
+        // kimi-k3 tiene supports_vision: true en moonshot.json
+        ModelExecutionConfig config = _store.GetExecutionConfigForModel("kimi-k3",
             new Dictionary<string, ProviderInfo>());
 
-        Assert.True(config.SupportsVision == true, "moonshot-v1-128k must have SupportsVision=true");
+        Assert.True(config.SupportsVision == true, "kimi-k3 must have SupportsVision=true");
     }
 
     // ──────────────────────────────────────────────────────────────────────

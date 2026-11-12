@@ -70,10 +70,10 @@ public class ModelSelectionStoreTests
     {
         ModelSelectionStore store = new();
 
-        ModelSelectionEntry? entry = store.FindModelSelectionEntry("nemotron-3-super", "ollama");
+        ModelSelectionEntry? entry = store.FindModelSelectionEntry("mimo-v2.6-pro", "ollama");
 
         Assert.NotNull(entry);
-        Assert.Equal("nemotron-3-super", entry.Value.Match);
+        Assert.Equal("mimo-v2.6-pro", entry.Value.Match);
     }
 
     [Fact]
@@ -103,10 +103,10 @@ public class ModelSelectionStoreTests
     {
         ModelSelectionStore store = new();
 
-        ModelSelectionEntry? entry = store.FindModelSelectionEntry("glm-5.2", "ollama");
+        ModelSelectionEntry? entry = store.FindModelSelectionEntry("glm-5.3", "ollama");
 
         Assert.NotNull(entry);
-        Assert.Equal("glm-5.2", entry.Value.Match);
+        Assert.Equal("glm-5.3", entry.Value.Match);
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public class ModelSelectionStoreTests
     {
         ModelSelectionStore store = new();
 
-        ModelSelectionEntry? entry = store.FindModelSelectionEntry("kimi-k2.6", "moonshot");
+        ModelSelectionEntry? entry = store.FindModelSelectionEntry("kimi-k2.7-code", "moonshot");
 
         Assert.NotNull(entry);
         Assert.Equal(1.0, entry.Value.Execution.Temperature);
@@ -183,7 +183,7 @@ public class ModelSelectionStoreTests
         ProviderHttpClientFactory factory = new();
         ProviderRegistry registry = new(factory);
 
-        ModelExecutionConfig config = store.GetExecutionConfigForModel("kimi-k2.6", registry.ModelToProvider);
+        ModelExecutionConfig config = store.GetExecutionConfigForModel("kimi-k2.7-code", registry.ModelToProvider);
 
         // kimi-k2.6 served via Ollama Cloud inherits the moonshot override_client_params
         // rule and must always pin temperature=1.0.
@@ -199,7 +199,7 @@ public class ModelSelectionStoreTests
         ProviderHttpClientFactory factory = new();
         ProviderRegistry registry = new(factory);
 
-        ModelExecutionConfig config = store.GetExecutionConfigForModel("nemotron-3-super", registry.ModelToProvider);
+        ModelExecutionConfig config = store.GetExecutionConfigForModel("deepseek-v4-pro", registry.ModelToProvider);
 
         Assert.True(config.Temperature.HasValue);
         Assert.Equal(0.2, config.Temperature.Value);
@@ -220,7 +220,7 @@ public class ModelSelectionStoreTests
     {
         ModelSelectionStore store = new();
 
-        bool isPreferred = store.IsPreferredModel("nemotron-3-super", "ollama");
+        bool isPreferred = store.IsPreferredModel("glm-5.3", "ollama");
 
         Assert.True(isPreferred);
     }
@@ -318,7 +318,7 @@ public class ModelSelectionStoreTests
         ProviderHttpClientFactory factory = new();
         ProviderRegistry registry = new(factory);
 
-        ModelExecutionConfig config = store.GetExecutionConfigForModel("deepseek-v4-flash", registry.ModelToProvider);
+        ModelExecutionConfig config = store.GetExecutionConfigForModel("deepseek-v4-pro", registry.ModelToProvider);
         Assert.NotNull(config.ReasoningEffort);
         Assert.NotEmpty(config.ReasoningEffort);
     }

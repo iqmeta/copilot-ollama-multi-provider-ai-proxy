@@ -48,7 +48,6 @@ public class ParameterValidationTests
 
     [Theory]
     [InlineData("deepseek-v4-pro",   "deepseek", true,  false)]
-    [InlineData("deepseek-v4-flash", "deepseek", true,  false)]
     public void DeepSeek_ReasoningEffortPresenceMatchesModel(
         string model, string provider, bool expectReasoningEffort, bool expectTopP)
     {
@@ -72,7 +71,6 @@ public class ParameterValidationTests
 
     [Theory]
     [InlineData("deepseek-v4-pro")]
-    [InlineData("deepseek-v4-flash")]
     public void DeepSeek_ReasoningModels_MaxTokensInjected(string model)
     {
         RequestTransformer sut = CreateTransformer();
@@ -88,10 +86,10 @@ public class ParameterValidationTests
 
     public static TheoryData<string> NvidiaModels =>
     [
-        "nvidia/nemotron-3-super-120b-a12b",
-        "z-ai/glm-5.2",
-        "deepseek-ai/deepseek-v4-pro",
-        "openai/gpt-oss-120b",
+        "nvidia/nemotron-3.5-super-vl-120b-a12b",
+        "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "stepfun-ai/step-5-preview",
+        "openai/gpt-oss-20b",
         "nvidia/nemotron-3-ultra-550b-a55b"
     ];
 
@@ -128,7 +126,6 @@ public class ParameterValidationTests
     [Theory]
     [InlineData("gpt-5.5-pro")]
     [InlineData("gpt-5.5")]
-    [InlineData("gpt-5.4")]
     [InlineData("gpt-5.4-mini")]
     [InlineData("o4-mini")]
     public void OpenAI_Models_MaxCompletionTokensInjected(string model)
@@ -149,7 +146,6 @@ public class ParameterValidationTests
     /// </summary>
     [Theory]
     [InlineData("gpt-5.5")]
-    [InlineData("gpt-5.4")]
     [InlineData("gpt-5.4-mini")]
     [InlineData("o4-mini")]
     public void OpenAI_Models_SamplingParamsStripped(string model)
@@ -190,7 +186,6 @@ public class ParameterValidationTests
     }
 
     [Theory]
-    [InlineData("gpt-5.4")]
     [InlineData("gpt-5.4-mini")]
     public void OpenAI_NonReasoningModels_NoReasoningEffort(string model)
     {
@@ -254,7 +249,7 @@ public class ParameterValidationTests
 
     [Theory]
     [InlineData("gpt-oss:120b")]
-    [InlineData("nemotron-3-super")]
+    [InlineData("glm-5.3")]
     [InlineData("kimi-k2.7-code")]
     public void OllamaCloud_Models_MaxTokensInjected(string model)
     {
@@ -281,7 +276,7 @@ public class ParameterValidationTests
     // ─── OpenRouter ──────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("nvidia/nemotron-3-super-120b-a12b")]
+    [InlineData("nvidia/nemotron-3.5-super-vl-120b-a12b")]
     [InlineData("qwen/qwen3-coder")]
     public void OpenRouter_Models_NoReasoningEffortLeakage(string model)
     {
@@ -295,9 +290,7 @@ public class ParameterValidationTests
 
     [Theory]
     [InlineData("kimi-k2.7-code")]
-    [InlineData("kimi-k2.6")]
-    [InlineData("moonshot-v1-128k")]
-    [InlineData("moonshot-v1-32k")]
+    [InlineData("kimi-k2.7-code-highspeed")]
     public void Moonshot_Models_MaxTokensInjected(string model)
     {
         RequestTransformer sut = CreateTransformer();
@@ -309,9 +302,7 @@ public class ParameterValidationTests
     }
 
     [Theory]
-    [InlineData("moonshot-v1-128k")]
-    [InlineData("moonshot-v1-auto")]
-    [InlineData("moonshot-v1-32k")]
+    [InlineData("kimi-k3")]
     public void Moonshot_Models_NoReasoningEffortLeakage(string model)
     {
         RequestTransformer sut = CreateTransformer();
@@ -322,8 +313,7 @@ public class ParameterValidationTests
 
     [Theory]
     [InlineData("kimi-k2.7-code")]
-    [InlineData("kimi-k2.6")]
-    [InlineData("moonshot-v1-128k")]
+    [InlineData("kimi-k2.7-code-highspeed")]
     public void Moonshot_Models_TemperatureInjected(string model)
     {
         RequestTransformer sut = CreateTransformer();
@@ -335,8 +325,7 @@ public class ParameterValidationTests
     }
 
     [Theory]
-    [InlineData("moonshot-v1-128k")]
-    [InlineData("moonshot-v1-32k")]
+    [InlineData("kimi-k3")]
     public void Moonshot_Models_TopPInjected(string model)
     {
         RequestTransformer sut = CreateTransformer();
@@ -351,11 +340,11 @@ public class ParameterValidationTests
 
     [Theory]
     [InlineData("deepseek-v4-pro",   "deepseek")]
-    [InlineData("deepseek-v4-flash", "deepseek")]
+    [InlineData("deepseek-flash",    "deepseek")]
     [InlineData("gpt-5.5-pro",       "openai")]
     [InlineData("o4-mini",           "openai")]
     [InlineData("kimi-k2.7-code",    "moonshot")]
-    [InlineData("kimi-k2.6",         "moonshot")]
+    [InlineData("kimi-k3",           "moonshot")]
     public void TopK_IsFiltered_ForNonSupportingProviders(string model, string provider)
     {
         RequestTransformer sut = CreateTransformer();
@@ -446,26 +435,16 @@ public class ParameterValidationTests
 
     [Theory]
     [InlineData("deepseek-v4-pro",              1_048_576, 384_000)]
-    [InlineData("deepseek-v4-flash",            1_048_576, 131_072)]
-    [InlineData("moonshotai/kimi-k2.6",          262_144, 262_144)]
-    [InlineData("nvidia/nemotron-3-super-120b-a12b", 1_000_000, 262_144)]
+    [InlineData("deepseek-flash",               1_000_000, 384_000)]
+    [InlineData("nvidia/nemotron-3.5-super-vl-120b-a12b", 128_000, 16_384)]
     [InlineData("gpt-5.5",       400_000, 128_000)]
-    [InlineData("gpt-5.4",       400_000,  65_536)]
     [InlineData("gpt-5.4-mini",  200_000,  32_768)]
     [InlineData("o4-mini",       200_000, 100_000)]
     [InlineData("openai/gpt-oss-20b",         131_072, 65_536)]
     [InlineData("kimi-k2.7-code",            262_144, 131_072)]
-    [InlineData("kimi-k2.6",                 262_144, 131_072)]
-    [InlineData("moonshot-v1-128k",          131_072,  32_768)]
-    [InlineData("moonshot-v1-auto",          131_072,  32_768)]
-    [InlineData("moonshot-v1-32k",            32_768,   8_192)]
-    // llama-3.3-70b-versatile and nvidia/llama-3.3-nemotron-super-49b-v1.5 dropped: retired
-    // 2026-09-11 (HTTP 404/410 verified live). zai-glm-4.7 retired the same day (404 archived).
+    [InlineData("kimi-k3",                   262_144, 131_072)]
     [InlineData("qwen/qwen3-coder",                  1_048_576, 262_000)]
     [InlineData("deepseek/deepseek-v4-pro",          1_048_576, 384_000)]
-    // zai-glm-4.7, llama-3.3-70b-versatile and nvidia/llama-3.3-nemotron-super-49b-v1.5 dropped:
-    // retired 2026-09-11 after HTTP 404/410 verified live. The Cerebras 8192-cap lesson that
-    // zai-glm-4.7 taught (published 128000, answered 400 at 13k) lives on in CLAUDE.md.
     [InlineData("gpt-oss-120b", 131_072, 65_536)]
     public void AllModels_HaveCorrectContextWindowConfig(
         string model, int expectedContextLength, int minMaxOutput)
@@ -490,7 +469,6 @@ public class ParameterValidationTests
 
     [Theory]
     [InlineData("deepseek-v4-pro")]
-    [InlineData("deepseek-v4-flash")]
     public void DeepSeek_ReasoningEffort_IsValidValue(string model)
     {
         ModelSelectionStore store  = new();
@@ -574,19 +552,20 @@ public class ParameterValidationTests
     // ─── Enabled model count per provider ───────────────────────────────
 
     [Theory]
-    [InlineData("deepseek", 3)]      // v4-pro + v4-flash + deepseek-flash (verified live 2026-09-10; coder-6.7b disabled)
-    [InlineData("google", 7)]        // gemini-2.5-pro re-enabled upstream (roster sync 2026-11-12)
-    [InlineData("openai", 4)]        // gpt-5.5, gpt-5.4, gpt-5.4-mini, o4-mini (gpt-5.5-pro is Responses-API only)
-    [InlineData("nvidia", 4)]        // minimax-m3 re-enabled upstream (roster sync 2026-11-12)
-    [InlineData("groq", 3)]          // -3 retired (qwen3.6-27b replaced by 3.8; compound & compound-mini HTTP 404, verified live 2026-10-06)
-    [InlineData("openrouter", 10)]
-    [InlineData("moonshot", 6)]      // 6 enabled (kimi-k2.5 disabled); v1-* kept: account 429s make them unverifiable
-    [InlineData("cerebras", 1)]      // gpt-oss-120b only; zai-glm-4.7 retired 2026-09-11 (HTTP 404 archived, verified live)
-    [InlineData("ollama", 9)]        // nemotron-3-nano:30b retired upstream (roster sync 2026-11-12)
-    [InlineData("mistral", 1)]       // codestral-latest enabled (verified live 2026-10-06 HTTP 200 OK)
-    [InlineData("cloudflare", 3)]    // llama-3.3-70b, qwen2.5-coder-32b, llama-3.1-8b (verified live 2026-10-06 HTTP 200 OK)
+    [InlineData("deepseek", 2)]      // deepseek-v4-pro, deepseek-flash (verified live 2026-11-12)
+    [InlineData("google", 4)]        // gemini-4-hydrogen, gemini-3.8-flash, gemini-3.5-flash, gemini-3.1-flash-lite
+    [InlineData("openai", 3)]        // gpt-5.5, gpt-5.4-mini, o4-mini (gpt-5.4 superseded by 5.5)
+    [InlineData("nvidia", 5)]        // nemotron-3.5-super-vl, nemotron-3.5-lightning, nemotron-3-ultra, step-5-preview, gpt-oss-20b
+    [InlineData("groq", 3)]          // gpt-oss-120b, gpt-oss-20b, qwen3.8-27b (verified live)
+    [InlineData("openrouter", 16)]   // latest generation models verified live 2026-11-12
+    [InlineData("moonshot", 3)]      // kimi-k3, kimi-k2.7-code, kimi-k2.7-code-highspeed
+    [InlineData("cerebras", 1)]      // gpt-oss-120b
+    [InlineData("ollama", 9)]        // latest cloud models (glm-5.3, glm-5.3-flash, deepseek-v4.1-flash, mistral-large-4, mimo-v2.6-pro, etc.)
+    [InlineData("mistral", 3)]       // mistral-large-4, mistral-code-latest, codestral-latest (verified live)
+    [InlineData("cloudflare", 3)]    // llama-3.3-70b, qwen2.5-coder-32b, llama-3.1-8b (verified live)
+    [InlineData("zai", 2)]           // glm-5.3, glm-5.3-flash
     [InlineData("zenmux", 0)]        // whole roster disabled 2026-07-31: HTTP 402 reject_no_credit on every model
-    [InlineData("anthropic", 4)]        // 4 enabled: Sonnet (5.5, 5) and Haiku (5.5, 5); 3.x retired, Opus and Fable disabled
+    [InlineData("anthropic", 2)]     // claude-sonnet-5-5, claude-haiku-5-5 (latest Sonnet & Haiku)
     public void EnabledModelCount_IsCorrect(string providerName, int expectedEnabled)
     {
         ModelSelectionStore store = new();

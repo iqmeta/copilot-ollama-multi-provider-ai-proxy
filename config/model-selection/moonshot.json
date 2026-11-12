@@ -44,7 +44,7 @@
     {
       "match": "kimi-k2.6",
       "priority": 3,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 262144,
         "max_output_tokens": 131072,
@@ -59,7 +59,8 @@
         "timeout_seconds": 180,
         "override_client_params": true
       },
-      "notes": "Kimi K2.6: strongest pre-K2.7. 256K ctx, multimodal. $0.95/$4.00. Cache hit $0.16."
+      "notes": "Kimi K2.6: strongest pre-K2.7. 256K ctx, multimodal. $0.95/$4.00. Cache hit $0.16.",
+      "_comment": "Disabled 2026-11-12: superseded by kimi-k3 / kimi-k2.7-code"
     },
     {
       "match": "kimi-k2.5",
@@ -83,9 +84,7 @@
     {
       "match": "moonshot-v1-128k",
       "priority": 5,
-      "enabled": true,
-      "_keep_enabled": true,
-      "_comment": "Dropped from /v1/models since 2026-09-10. Callability UNVERIFIABLE: the Moonshot account is suspended for insufficient balance, so every model on it answers 429 - including kimi-k2.7-code, which is certainly alive. Kept until the account recovers and the roster can be verified (2026-09-11).",
+      "enabled": false,
       "execution": {
         "context_length": 131072,
         "max_output_tokens": 32768,
@@ -96,14 +95,13 @@
         "top_p": 0.9,
         "max_tokens": 4096,
         "timeout_seconds": 120
-      }
+      },
+      "_comment": "Disabled 2026-11-12: legacy v1 dropped from /v1/models"
     },
     {
       "match": "moonshot-v1-auto",
       "priority": 6,
-      "enabled": true,
-      "_keep_enabled": true,
-      "_comment": "Dropped from /v1/models since 2026-09-10. Callability UNVERIFIABLE: the Moonshot account is suspended for insufficient balance (429 on every model). Kept until the account recovers and the roster can be verified (2026-09-11).",
+      "enabled": false,
       "execution": {
         "context_length": 131072,
         "max_output_tokens": 32768,
@@ -114,14 +112,13 @@
         "top_p": 0.9,
         "max_tokens": 4096,
         "timeout_seconds": 120
-      }
+      },
+      "_comment": "Disabled 2026-11-12: legacy v1 dropped from /v1/models"
     },
     {
       "match": "moonshot-v1-32k",
       "priority": 7,
-      "enabled": true,
-      "_keep_enabled": true,
-      "_comment": "Dropped from /v1/models since 2026-09-10. Callability UNVERIFIABLE: the Moonshot account is suspended for insufficient balance (429 on every model). Kept until the account recovers and the roster can be verified (2026-09-11).",
+      "enabled": false,
       "execution": {
         "context_length": 32768,
         "max_output_tokens": 8192,
@@ -132,7 +129,8 @@
         "top_p": 0.9,
         "max_tokens": 4096,
         "timeout_seconds": 120
-      }
+      },
+      "_comment": "Disabled 2026-11-12: legacy v1 dropped from /v1/models"
     },
     {
       "match": "moonshot-v1-8k",
@@ -153,18 +151,20 @@
     {
       "match": "kimi-k3",
       "priority": 9,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-09-10",
-      "_comment": "roster sync 2026-09-10: auto-added, disabled until reviewed",
       "execution": {
-        "context_length": 128000,
-        "max_output_tokens": 8192,
         "supports_tools": true,
-        "supports_vision": false,
-        "family": "api",
-        "timeout_seconds": 120
-      }
+        "timeout_seconds": 120,
+        "supports_vision": true,
+        "family": "moonshotai",
+        "context_length": 262144,
+        "max_output_tokens": 131072,
+        "top_p": 0.95,
+        "max_tokens": 8192,
+        "temperature": 0.3
+      },
+      "_comment": "Promoted 2026-11-12: latest Kimi K3 model"
     }
   ]
 }

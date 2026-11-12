@@ -4,7 +4,7 @@
     {
       "match": "glm-5.2",
       "priority": 1,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 1048576,
         "max_output_tokens": 131072,
@@ -17,12 +17,13 @@
         "max_tokens": 16384,
         "reasoning_effort": "max",
         "timeout_seconds": 240
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by glm-5.3"
     },
     {
       "match": "glm-5.1",
       "priority": 2,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 1048576,
         "max_output_tokens": 65536,
@@ -35,14 +36,13 @@
         "max_tokens": 16384,
         "reasoning_effort": "high",
         "timeout_seconds": 240
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by glm-5.3"
     },
     {
       "match": "glm-4.7-flashx",
       "priority": 3,
-      "enabled": true,
-      "_keep_enabled": true,
-      "_comment": "Dropped from /v1/models since 2026-09-10. Callability UNVERIFIABLE: the Z.AI account has no balance (code 1113) so every model answers 429. Kept until the account recovers and the roster can be verified (2026-09-11).",
+      "enabled": false,
       "execution": {
         "context_length": 131072,
         "max_output_tokens": 65536,
@@ -55,14 +55,13 @@
         "max_tokens": 16384,
         "reasoning_effort": "high",
         "timeout_seconds": 180
-      }
+      },
+      "_comment": "Disabled 2026-11-12: legacy 4.7 dropped from /v1/models"
     },
     {
       "match": "glm-4.7-flash",
       "priority": 4,
-      "enabled": true,
-      "_keep_enabled": true,
-      "_comment": "Dropped from /v1/models since 2026-09-10. Callability UNVERIFIABLE: the Z.AI account has no balance (code 1113) so every model answers 429. Kept until the account recovers and the roster can be verified (2026-09-11).",
+      "enabled": false,
       "execution": {
         "context_length": 131072,
         "max_output_tokens": 32768,
@@ -74,12 +73,13 @@
         "top_p": 0.9,
         "max_tokens": 8192,
         "timeout_seconds": 120
-      }
+      },
+      "_comment": "Disabled 2026-11-12: legacy 4.7 dropped from /v1/models"
     },
     {
       "match": "glm-4.7",
       "priority": 5,
-      "enabled": true,
+      "enabled": false,
       "execution": {
         "context_length": 131072,
         "max_output_tokens": 32768,
@@ -91,7 +91,8 @@
         "top_p": 0.9,
         "max_tokens": 8192,
         "timeout_seconds": 120
-      }
+      },
+      "_comment": "Disabled 2026-11-12: superseded by glm-5.3"
     },
     {
       "match": "glm-4.5",
@@ -176,10 +177,8 @@
     {
       "match": "glm-5.3",
       "priority": 11,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-09-10",
-      "_comment": "Z.AI code 1113: insufficient balance / no resource package (verified live 2026-09-10). Re-enable after recharge.",
       "execution": {
         "context_length": 128000,
         "max_output_tokens": 32768,
@@ -187,15 +186,14 @@
         "supports_vision": false,
         "family": "api",
         "timeout_seconds": 120
-      }
+      },
+      "_comment": "Promoted 2026-11-12: latest GLM 5.3 flagship"
     },
     {
       "match": "glm-5.3-flash",
       "priority": 12,
-      "enabled": false,
-      "_auto": true,
+      "enabled": true,
       "_added": "2026-09-10",
-      "_comment": "Z.AI code 1113: insufficient balance / no resource package (verified live 2026-09-10). Re-enable after recharge.",
       "execution": {
         "context_length": 128000,
         "max_output_tokens": 32768,
@@ -203,7 +201,8 @@
         "supports_vision": false,
         "family": "api",
         "timeout_seconds": 120
-      }
+      },
+      "_comment": "Promoted 2026-11-12: latest GLM 5.3 Flash"
     }
   ]
 }
